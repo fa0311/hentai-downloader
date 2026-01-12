@@ -1,5 +1,4 @@
 import "dotenv/config";
-import { getChromeHeader } from "./utils/header";
 
 const contentsDomain = "gold-usergeneratedcontent.net";
 
@@ -115,22 +114,11 @@ const getGalleries = async (id: string): Promise<GalleryInfo> => {
 	return galleries;
 };
 
-const downloadImage = async (url: string, referer: string) => {
-	const header = await getChromeHeader();
-	const response = await fetch(url, {
-		headers: {
-			...header,
-			accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-			"accept-language": "ja-JP,ja;q=0.9",
-			"cache-control": "no-cache",
-			pragma: "no-cache",
-			referer: referer,
-		},
-	});
-	return response;
+type DownloadHitomiParam = {
+	additionalHeaders?: Record<string, string>;
 };
 
-export const downloadHitomi = async (id: string) => {
+export const downloadHitomi = async (id: string, { additionalHeaders }: DownloadHitomiParam) => {
 	const ggJs = await getGGJsCode();
 	const galleries = await getGalleries(id);
 
@@ -141,7 +129,17 @@ export const downloadHitomi = async (id: string) => {
 
 	const list = files.map(([file, webpUrl]) => {
 		const callback = async () => {
-			const response = await downloadImage(webpUrl, `https://hitomi.la/reader/${id}.html`);
+			const response = await fetch(webpUrl, {
+				headers: {
+					...additionalHeaders,
+					accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+					"accept-language": "ja-JP,ja;q=0.9",
+					"cache-control": "no-cache",
+					pragma: "no-cache",
+					referer: `https://hitomi.la/reader/${id}.html`,
+				},
+			});
+
 			if (!response.ok) {
 				throw new Error(`Failed to download: ${webpUrl} - ${response.status} ${response.statusText}`);
 			}
