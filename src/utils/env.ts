@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import { getFromCache } from "./cache.js";
 
 const envSchema = z
 	.object({
@@ -11,17 +12,17 @@ const envSchema = z
 	})
 	.partial();
 
-const parseEnv = async () => {
-	const env = await envSchema.safeParseAsync(process.env);
-	if (env.success) {
-		return env.data;
-	} else {
-		for (const iss of env.error.issues) {
-			const path = iss.path?.length ? iss.path.join(".") : "(root)";
-			console.error(`[${iss.code}] path=${path} message=${iss.message}`);
+export const parseEnv = async () => {
+	return await getFromCache("env", async () => {
+		const env = await envSchema.safeParseAsync(process.env);
+		if (env.success) {
+			return env.data;
+		} else {
+			for (const iss of env.error.issues) {
+				const path = iss.path?.length ? iss.path.join(".") : "(root)";
+				console.error(`[${iss.code}] path=${path} message=${iss.message}`);
+			}
+			throw new Error("Invalid settings");
 		}
-		throw new Error("Invalid settings");
-	}
+	});
 };
-
-export const env = await parseEnv();
