@@ -1,17 +1,17 @@
 import { Semaphore } from "async-mutex";
+import { createWriteStream } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { pipeline } from "node:stream/promises";
 import { downloadHitomiGalleries, type GalleryInfo } from "./hitomi/gallery";
+import { downloadHitomiNozomiList, type SearchQuery } from "./hitomi/list";
+import { generateComicInfoXml } from "./hitomi/metadata";
+import { exponentialBackoff } from "./utils/backoff";
+import { intersectAllGallerieIds } from "./utils/bitmap";
+import { createCbz } from "./utils/cbz";
 import { ensureDirExists } from "./utils/dir";
 import { parseEnv } from "./utils/env";
 import { getChromeHeader } from "./utils/header";
-import { exponentialBackoff } from "./utils/backoff";
-import path from "node:path";
-import fs from "node:fs/promises";
-import { createCbz } from "./utils/cbz";
-import { createWriteStream } from "node:fs";
-import { pipeline } from "node:stream/promises";
-import { generateComicInfoXml } from "./hitomi/metadata";
-import { downloadHitomiNozomiList, SearchQuery } from "./hitomi/list";
-import { intersectAllGallerieIds } from "./utils/bitmap";
 
 const env = await parseEnv();
 
@@ -68,7 +68,10 @@ export type DownloadOptions = {
 	isSkipDownload?: (galleryId: string) => boolean;
 };
 
-export const downloadHitomiMangaList = async (query: SearchQuery, { isSkipDownload = () => false }: DownloadOptions) => {
+export const downloadHitomiMangaList = async (
+	query: SearchQuery,
+	{ isSkipDownload = () => false }: DownloadOptions,
+) => {
 	const semaphore = new Semaphore(5);
 	const backoff = exponentialBackoff({ baseDelayMs: 500, maxRetries: 10 });
 	const additionalHeaders = await getChromeHeader();

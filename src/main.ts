@@ -1,16 +1,10 @@
-import { socksDispatcher } from "fetch-socks";
-import { parseEnv } from "./utils/env";
 import { Command } from "@commander-js/extra-typings";
-import { downloadHitomiManga, downloadHitomiMangaList, DownloadOptions } from "./download";
-import {
-	checkHitomiUrl,
-	getHitomiGalleryIdFromUrl,
-	getHitomiListQueryFromUrl,
-	getHitomiSearchQueryFromUrl,
-} from "./hitomi/url";
+import { socksDispatcher } from "fetch-socks";
+import { type DownloadOptions, downloadHitomiManga, downloadHitomiMangaList } from "./download";
+import { parseHitomiUrl } from "./hitomi/url";
 import { loadConfig } from "./utils/config";
-import { CronJob } from "cron";
 import { listSubdirNames } from "./utils/dir";
+import { parseEnv } from "./utils/env";
 
 const env = await parseEnv();
 if (env.SOCKS_HOST !== undefined && env.SOCKS_PORT !== undefined) {
@@ -26,21 +20,11 @@ if (env.SOCKS_HOST !== undefined && env.SOCKS_PORT !== undefined) {
 }
 
 const downloadHitomiFromUrl = async (url: string, downloadOptions: DownloadOptions) => {
-	const { isSearchPath, isGalleryPath, isListPath } = checkHitomiUrl(url);
-	if (isGalleryPath) {
-		const galleryId = getHitomiGalleryIdFromUrl(url);
-		await downloadHitomiManga(galleryId);
-	}
-
-	if (isListPath) {
-		const query = getHitomiListQueryFromUrl(url);
-		console.log("List query:", query);
-		await downloadHitomiMangaList(query, downloadOptions);
-	}
-
-	if (isSearchPath) {
-		const query = getHitomiSearchQueryFromUrl(url);
-		console.log("List query:", query);
+	const query = parseHitomiUrl(url);
+	if (typeof query === "string") {
+		await downloadHitomiManga(query);
+		return;
+	} else {
 		await downloadHitomiMangaList(query, downloadOptions);
 	}
 };
@@ -109,11 +93,13 @@ program
 				return false;
 			};
 
-			if (query.url !== undefined) {
-				await downloadHitomiFromUrl(query.url, { isSkipDownload });
-			}
-			if (query.query !== undefined) {
-				await downloadHitomiMangaList(query.query, { isSkipDownload });
+			switch (query.type) {
+				case "url":
+					await downloadHitomiFromUrl(query.url, { isSkipDownload });
+					return;
+				case "query":
+					await downloadHitomiMangaList(query.query, { isSkipDownload });
+					return;
 			}
 		}
 	});

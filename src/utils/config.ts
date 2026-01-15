@@ -1,46 +1,30 @@
-import z from "zod";
 import fs from "node:fs/promises";
+import z from "zod";
 
 const configSchema = z.object({
 	cron: z.string(),
-	queries: z.array(
-		z
-			.object({
-				url: z.string().optional(),
-				query: z
-					.object({
-						artists: z.array(z.string()).optional(),
-						series: z.array(z.string()).optional(),
-						characters: z.array(z.string()).optional(),
-						groups: z.array(z.string()).optional(),
+	queries: z
+		.array(
+			z.discriminatedUnion("kind", [
+				z.object({
+					type: z.literal("url"),
+					url: z.string(),
+				}),
+				z.object({
+					type: z.literal("query"),
+					query: z.object({
+						artists: z.array(z.string()).default([]),
+						series: z.array(z.string()).default([]),
+						characters: z.array(z.string()).default([]),
+						groups: z.array(z.string()).default([]),
 						type: z.string().optional(),
-						language: z.string().optional(),
-						tags: z.array(z.string()).optional(),
-					})
-					.refine(
-						(data) => {
-							return Object.values(data).some((value) => {
-								if (Array.isArray(value)) {
-									return value.length > 0;
-								}
-								return value !== undefined;
-							});
-						},
-						{
-							message: "At least one query parameter must be specified",
-						},
-					)
-					.optional(),
-			})
-			.refine(
-				(data) => {
-					return data.url !== undefined || data.query !== undefined;
-				},
-				{
-					message: "Either 'url' or 'query' must be specified",
-				},
-			),
-	).min(1),
+						language: z.string().default("all"),
+						tags: z.array(z.string()).default([]),
+					}),
+				}),
+			]),
+		)
+		.min(1),
 });
 
 export const parseEnv = async (config: object) => {

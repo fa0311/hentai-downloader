@@ -1,11 +1,11 @@
 export type SearchQuery = {
-	artists?: string[];
-	series?: string[];
-	characters?: string[];
-	groups?: string[];
+	artists: string[];
+	series: string[];
+	characters: string[];
+	groups: string[];
 	type?: string;
-	language?: string;
-	tags?: string[];
+	language: string;
+	tags: string[];
 };
 
 const domain = "ltn.gold-usergeneratedcontent.net";

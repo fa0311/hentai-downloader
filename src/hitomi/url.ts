@@ -1,30 +1,126 @@
-import zod from "zod";
-import { SearchQuery } from "./list";
+import { z } from "zod";
+import type { SearchQuery } from "./list";
 
-const urlSchema = zod.url();
+const urlSchema = z.url();
 
-const listDir = ["artist", "group", "series", "character", "type", "tag"] as const;
-const searchDir = ["search", "index"] as const;
-const galleryDir = ["cg", "doujinshi", "manga", "gamecg", "imageset", "anime"] as const;
+const galleryDirList = ["cg", "doujinshi", "manga", "gamecg", "imageset", "anime"] as const;
+const listDirList = ["artist", "group", "series", "character", "type", "tag"] as const;
 
-export const checkHitomiUrl = (url: string) => {
+export const parseHitomiUrl = (url: string): SearchQuery | string => {
 	const parsedUrl = new URL(urlSchema.parse(url));
-	if (parsedUrl.hostname !== "hitomi.la") {
-		throw new Error("Invalid Hitomi.la URL");
+	const galleryDir = galleryDirList.join("|");
+	const listDir = listDirList.join("|");
+
+	const galleryPattern = new URLPattern({
+		protocol: "https:",
+		hostname: "hitomi.la",
+		pathname: `/:type(${galleryDir})/:any-:id([0-9]+).html`,
+	});
+
+	const listPattern = new URLPattern({
+		protocol: "https:",
+		hostname: "hitomi.la",
+		pathname: `/:type(${listDir})/:name-:language([a-zA-Z]+).html`,
+	});
+
+	const indexPattern = new URLPattern({
+		protocol: "https:",
+		hostname: "hitomi.la",
+		pathname: `/index-:language([a-zA-Z]+).html`,
+	});
+
+	const searchPattern = new URLPattern({
+		protocol: "https:",
+		hostname: "hitomi.la",
+		pathname: "/search.html",
+	});
+
+	const galleryMatch = galleryPattern.exec(parsedUrl.href);
+	if (galleryMatch) {
+		return galleryMatch.pathname.groups.id!;
+	}
+	const listMatch = listPattern.exec(parsedUrl.href);
+	if (listMatch) {
+		const query = (() => {
+			switch (listMatch.pathname.groups.type!) {
+				case "artist":
+					return { artists: [listMatch.pathname.groups.name!] };
+				case "group":
+					return { groups: [listMatch.pathname.groups.name!] };
+				case "series":
+					return { series: [listMatch.pathname.groups.name!] };
+				case "character":
+					return { characters: [listMatch.pathname.groups.name!] };
+				case "type":
+					return { type: listMatch.pathname.groups.name! };
+				case "tag":
+					return { tags: [listMatch.pathname.groups.name!] };
+				default:
+					throw new Error("Unreachable code");
+			}
+		})();
+
+		return {
+			series: [],
+			characters: [],
+			groups: [],
+			tags: [],
+			artists: [],
+			language: listMatch.pathname.groups.language!,
+			...query,
+		};
 	}
 
-	const isListPath = listDir.some((dir) => parsedUrl.pathname.startsWith(`/${dir}`));
-	const isSearchPath = searchDir.some((dir) => parsedUrl.pathname.startsWith(`/${dir}`));
-	const isGalleryPath = galleryDir.some((dir) => parsedUrl.pathname.startsWith(`/${dir}`));
-	if (!isSearchPath && !isGalleryPath && !isListPath) {
-		throw new Error("Invalid Hitomi.la URL path");
+	const indexMatch = indexPattern.exec(parsedUrl.href);
+	if (indexMatch) {
+		return {
+			series: [],
+			characters: [],
+			groups: [],
+			tags: [],
+			artists: [],
+			language: indexMatch.pathname.groups.language!,
+		};
 	}
-	return {
-		url: parsedUrl,
-		isListPath,
-		isSearchPath,
-		isGalleryPath,
-	};
+
+	const searchMatch = searchPattern.exec(parsedUrl.href);
+	if (searchMatch) {
+		const searchParams = parsedUrl.searchParams;
+		const rawQuery = searchParams.keys().next().value;
+
+		if (!rawQuery) {
+			throw new Error("Invalid Hitomi.la search URL: No search keywords found");
+		}
+
+		const queries = rawQuery
+			.split(" ")
+			.map((e) => e.trim())
+			.filter(Boolean);
+
+		const args = queries.map((q) => {
+			if (!q.includes(":")) {
+				throw new Error("Unsupported Hitomi.la search URL: Free text search is not supported");
+			}
+			const [key, ...rest] = q.split(":");
+			const value = rest.join(":");
+			return [key.toLowerCase(), value];
+		});
+
+		return {
+			artists: args.filter(([k]) => k === "artist").map(([, v]) => v),
+			groups: args.filter(([k]) => k === "group").map(([, v]) => v),
+			series: args.filter(([k]) => k === "series").map(([, v]) => v),
+			characters: args.filter(([k]) => k === "character").map(([, v]) => v),
+			tags: [
+				...args.filter(([k]) => k === "tag").map(([, v]) => v),
+				...args.filter(([k]) => ["female", "male"].includes(k)).map(([k, v]) => `${k}:${v}`),
+			],
+			language: args.find(([k]) => k === "language")?.[1] ?? "all",
+			type: args.find(([k]) => k === "type")?.[1],
+		};
+	}
+
+	throw new Error("Invalid Hitomi.la URL");
 };
 
 export const getHitomiGalleryIdFromUrl = (url: string): string => {
@@ -34,129 +130,5 @@ export const getHitomiGalleryIdFromUrl = (url: string): string => {
 		return match[1];
 	} else {
 		throw new Error("Invalid Hitomi.la gallery URL: Unable to extract gallery ID");
-	}
-};
-
-export const getHitomiListQueryFromUrl = (url: string): SearchQuery => {
-	const parsedUrl = new URL(urlSchema.parse(url));
-
-	const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-	const languageMatch = /-([a-zA-Z]+)(?:\.html)?$/.exec(parsedUrl.pathname);
-	const language = languageMatch && languageMatch[1] !== "all" ? decodeURIComponent(languageMatch[1]) : undefined;
-
-	const listDirPattern = listDir
-		.map(escapeRegExp)
-		.sort((a, b) => b.length - a.length)
-		.join("|");
-	const regex = new RegExp(`^/(?:${listDirPattern})/([^/]+)-[^/]+/?$`);
-
-	const match = regex.exec(parsedUrl.pathname);
-	if (!match) {
-		throw new Error("Invalid Hitomi.la list URL: Unable to extract list query");
-	}
-
-	const listType = match[0].split("/")[1];
-	const rawQuery = decodeURIComponent(match[1]);
-
-	const query: SearchQuery = {};
-
-	if(language) {
-		query.language = language;
-	}
-
-	switch (listType) {
-		case "artist":
-			query.artists = [rawQuery];
-			break;
-		case "group":
-			query.groups = [rawQuery];
-			break;
-		case "series":
-			query.series = [rawQuery];
-			break;
-		case "character":
-			query.characters = [rawQuery];
-			break;
-		case "type":
-			query.type = rawQuery;
-			break;
-		case "tag":
-			query.tags = [rawQuery];
-			break;
-		default:
-			throw new Error("Unsupported list type in Hitomi.la URL");
-	}
-
-	return query;
-};
-
-export const getHitomiSearchQueryFromUrl = (url: string): SearchQuery => {
-	const parsedUrl = new URL(urlSchema.parse(url));
-
-	if (parsedUrl.pathname.startsWith("/index")) {
-		const match = /index-(.+?)\.html$/.exec(parsedUrl.pathname);
-		if (match) {
-			return {
-				language: decodeURIComponent(match[1]),
-			};
-		} else {
-			throw new Error("Invalid Hitomi.la search URL: Unable to extract search query");
-		}
-	} else if (parsedUrl.pathname.startsWith("/search")) {
-		const searchParams = parsedUrl.searchParams;
-		const rawQuery = searchParams.keys().next().value;
-
-		if (!rawQuery) {
-			throw new Error("Invalid Hitomi.la search URL: No search keywords found");
-		}
-
-		const queries = rawQuery.split(/\s+/).map(decodeURIComponent).filter(Boolean);
-
-		const query = {
-			artists: [] as string[],
-			groups: [] as string[],
-			series: [] as string[],
-			characters: [] as string[],
-			tags: [] as string[],
-			language: undefined as string | undefined,
-			type: undefined as string | undefined,
-		};
-
-		for (const q of queries) {
-			const [key, ...rest] = q.split(":");
-			const value = rest.join(":").replace(/_/g, " ").trim();
-			if (!value) continue;
-
-			switch (key.toLowerCase()) {
-				case "artist":
-					query.artists.push(value);
-					break;
-				case "group":
-					query.groups.push(value);
-					break;
-				case "series":
-					query.series.push(value);
-					break;
-				case "character":
-					query.characters.push(value);
-					break;
-				case "tag":
-					query.tags.push(value);
-					break;
-				case "language":
-					query.language = value;
-					break;
-				case "type":
-					query.type = value;
-					break;
-				default:
-					break;
-			}
-		}
-
-		return query;
-	} else {
-		throw new Error("Invalid Hitomi.la search URL path");
 	}
 };
