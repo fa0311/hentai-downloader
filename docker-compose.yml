@@ -1,0 +1,27 @@
+services:
+  downloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: downloader:latest
+    container_name: downloader
+    # restart: unless-stopped
+
+    environment:
+      # SOCKS
+      SOCKS_TYPE: ${SOCKS_TYPE:-}
+      SOCKS_HOST: ${SOCKS_HOST:-}
+      SOCKS_PORT: ${SOCKS_PORT:-}
+      SOCKS_USER: ${SOCKS_USER:-}
+      SOCKS_PASSWORD: ${SOCKS_PASSWORD:-}
+
+      # Output / Download
+      OUTPUT_TYPE: ${OUTPUT_TYPE:-}
+      OUTPUT_PATH: ${OUTPUT_PATH:-/outputs}
+      DOWNLOAD_PATH: ${DOWNLOAD_PATH:-/downloads}
+      AUTO_CLEAN_DOWNLOAD: ${AUTO_CLEAN_DOWNLOAD:-true}
+      SKIP_VIDEO: ${SKIP_VIDEO:-true}
+
+    volumes:
+      - ./outputs:/outputs
+      - ./downloads:/downloads

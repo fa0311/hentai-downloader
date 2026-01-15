@@ -13,6 +13,18 @@ const envSchema = z.object({
 		.transform((v) => Number(v)),
 	SOCKS_USER: z.string().optional(),
 	SOCKS_PASSWORD: z.string().optional(),
+	TZ: z.string().default("UTC"),
+	OUTPUT_TYPE: z.enum(["directory", "cbz"]).default("directory"),
+	SKIP_VIDEO: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((v) => v === "true"),
+	DOWNLOAD_PATH: z.string().default("/downloads"),
+	OUTPUT_PATH: z.string().default("/manga"),
+	AUTO_CLEAN_DOWNLOAD: z
+		.enum(["true", "false"])
+		.default("true")
+		.transform((v) => v === "true"),
 });
 
 export const parseEnv = async () => {

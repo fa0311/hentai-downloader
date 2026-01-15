@@ -55,7 +55,12 @@ const getWebpUrlFromHash = (hash: string, ggJs: GGJsCode): string => {
 	return `https://${subdomain}.${contentsDomain}/${directory1}/${directory2}/${hash}.webp`;
 };
 
-type GalleryInfo = {
+// 動画ファイル名から動画URLを生成する
+const getStreamUrlFromVideoFilename = (videoFilename: string): string => {
+	return `https://streaming.${contentsDomain}/videos/${videoFilename}`;
+};
+
+export type GalleryInfo = {
 	files: {
 		hash: string;
 		height: number;
@@ -87,16 +92,25 @@ type GalleryInfo = {
 	}[];
 	title: string;
 	language: string;
-	parodys: {
-		parody: string;
-		url: string;
-	}[];
-	artists: {
-		artist: string;
-		url: string;
-	}[];
-	groups: null; // ?
-	videofilename: null; // ?
+	parodys:
+		| {
+				parody: string;
+				url: string;
+		  }[]
+		| null;
+	artists:
+		| {
+				artist: string;
+				url: string;
+		  }[]
+		| null;
+	groups:
+		| {
+				group: string;
+				url: string;
+		  }[]
+		| null;
+	videofilename: string | null; // ?
 	id: string;
 };
 
@@ -116,12 +130,14 @@ const getGalleries = async (id: string): Promise<GalleryInfo> => {
 
 type DownloadHitomiParam = {
 	additionalHeaders?: Record<string, string>;
+	skipVideo?: boolean;
 };
 
-export const downloadHitomi = async (id: string, { additionalHeaders }: DownloadHitomiParam) => {
-	const ggJs = await getGGJsCode();
-	const galleries = await getGalleries(id);
-
+const downloadImages = async (
+	galleries: GalleryInfo,
+	ggJs: GGJsCode,
+	{ additionalHeaders }: DownloadHitomiParam,
+) => {
 	const files = galleries.files.map((file) => {
 		const webpUrl = getWebpUrlFromHash(file.hash, ggJs);
 		return [file, webpUrl] as const;
@@ -136,7 +152,7 @@ export const downloadHitomi = async (id: string, { additionalHeaders }: Download
 					"accept-language": "ja-JP,ja;q=0.9",
 					"cache-control": "no-cache",
 					pragma: "no-cache",
-					referer: `https://hitomi.la/reader/${id}.html`,
+					referer: `https://hitomi.la/reader/${galleries.id}.html`,
 				},
 			});
 
@@ -147,5 +163,50 @@ export const downloadHitomi = async (id: string, { additionalHeaders }: Download
 		};
 		return [file, callback] as const;
 	});
+
+	return list;
+};
+
+const downloadVideo = async (galleries: GalleryInfo, { additionalHeaders }: DownloadHitomiParam) => {
+	if (galleries.videofilename === null) {
+		return null;
+	}
+
+	const streamFile = getStreamUrlFromVideoFilename(galleries.videofilename);
+
+	const file = { name: galleries.videofilename! };
+	const callback = async () => {
+		const response = await fetch(streamFile, {
+			headers: {
+				...additionalHeaders,
+				accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+				"accept-language": "ja-JP,ja;q=0.9",
+				"cache-control": "no-cache",
+				pragma: "no-cache",
+				priority: "i",
+				range: "bytes=0-",
+				referer: `https://hitomi.la/reader/${galleries.id}.html`,
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to download: ${streamFile} - ${response.status} ${response.statusText}`);
+		}
+		return response;
+	};
+
+	return [file, callback] as const;
+};
+
+export const downloadHitomiGalleries = async (id: string, { additionalHeaders, skipVideo = false }: DownloadHitomiParam) => {
+	const ggJs = await getGGJsCode();
+	const galleries = await getGalleries(id);
+
+	const imageList = await downloadImages(galleries, ggJs, { additionalHeaders });
+
+	const video = !skipVideo ? await downloadVideo(galleries, { additionalHeaders }) : null;
+
+	const list = [...imageList, ...(video ? [video] : [])];
+
 	return [galleries, list] as const;
 };
