@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
-    "dev": "tsx src/main.ts"
+    "dev": "tsx src/main.ts",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "keywords": [
     "downloader",
@@ -33,6 +35,7 @@
     "@types/node": "^25.0.6",
     "@types/yazl": "^3.3.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.17"
   }
 }

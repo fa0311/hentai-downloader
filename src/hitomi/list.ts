@@ -10,18 +10,10 @@ export type SearchQuery = {
 
 const domain = "ltn.gold-usergeneratedcontent.net";
 
-const getNozomiUrls = ({
-	artists = [],
-	series = [],
-	characters = [],
-	groups = [],
-	type,
-	language,
-	tags = [],
-}: SearchQuery): string[] => {
+export const getNozomiUrls = ({ artists, series, characters, groups, type, language, tags }: SearchQuery): string[] => {
 	const urls: string[] = [];
 
-	const languageQuery = `-${language || "all"}.nozomi`;
+	const languageQuery = `-${language}.nozomi`;
 	for (const artist of artists) {
 		urls.push(`https://${domain}/artist/${encodeURIComponent(artist)}${languageQuery}`);
 	}
@@ -42,21 +34,11 @@ const getNozomiUrls = ({
 		urls.push(`https://${domain}/type/${encodeURIComponent(type)}${languageQuery}`);
 	}
 
-	if (tags.length > 0) {
-		for (const tag of tags) {
-			urls.push(`https://${domain}/tag/${encodeURIComponent(tag)}${languageQuery}`);
-		}
+	for (const tag of tags) {
+		urls.push(`https://${domain}/tag/${encodeURIComponent(tag)}${languageQuery}`);
 	}
 
-	if (
-		language &&
-		artists.length === 0 &&
-		groups.length === 0 &&
-		series.length === 0 &&
-		characters.length === 0 &&
-		!type &&
-		tags.length === 0
-	) {
+	if (urls.length === 0) {
 		urls.push(`https://${domain}/index-${encodeURIComponent(language)}.nozomi`);
 	}
 
@@ -68,7 +50,7 @@ type DownloadNozomiListParam = {
 };
 
 export const downloadHitomiNozomiList = async (query: SearchQuery, { additionalHeaders }: DownloadNozomiListParam) => {
-	const nozomiUrls = await getNozomiUrls(query);
+	const nozomiUrls = getNozomiUrls(query);
 
 	const tasks = nozomiUrls.map((url) => {
 		return async () => {

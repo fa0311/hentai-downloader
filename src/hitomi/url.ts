@@ -42,19 +42,20 @@ export const parseHitomiUrl = (url: string): SearchQuery | string => {
 	const listMatch = listPattern.exec(parsedUrl.href);
 	if (listMatch) {
 		const query = (() => {
+			const name = decodeURIComponent(listMatch.pathname.groups.name!);
 			switch (listMatch.pathname.groups.type!) {
 				case "artist":
-					return { artists: [listMatch.pathname.groups.name!] };
+					return { artists: [name] };
 				case "group":
-					return { groups: [listMatch.pathname.groups.name!] };
+					return { groups: [name] };
 				case "series":
-					return { series: [listMatch.pathname.groups.name!] };
+					return { series: [name] };
 				case "character":
-					return { characters: [listMatch.pathname.groups.name!] };
+					return { characters: [name] };
 				case "type":
-					return { type: listMatch.pathname.groups.name! };
+					return { type: name };
 				case "tag":
-					return { tags: [listMatch.pathname.groups.name!] };
+					return { tags: [name] };
 				default:
 					throw new Error("Unreachable code");
 			}
@@ -92,7 +93,7 @@ export const parseHitomiUrl = (url: string): SearchQuery | string => {
 			throw new Error("Invalid Hitomi.la search URL: No search keywords found");
 		}
 
-		const queries = rawQuery
+		const queries = decodeURIComponent(rawQuery)
 			.split(" ")
 			.map((e) => e.trim())
 			.filter(Boolean);
