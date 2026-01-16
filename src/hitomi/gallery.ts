@@ -60,14 +60,16 @@ const getStreamUrlFromVideoFilename = (videoFilename: string): string => {
 	return `https://streaming.${contentsDomain}/videos/${videoFilename}`;
 };
 
+type GalleryInfoFile = {
+	hash: string;
+	height: number;
+	width: number;
+	name: string;
+	hasavif: boolean;
+};
+
 export type GalleryInfo = {
-	files: {
-		hash: string;
-		height: number;
-		width: number;
-		name: string;
-		hasavif: boolean;
-	}[];
+	files: GalleryInfoFile[];
 	language_localname: string;
 	blocked: number;
 	date: string;
@@ -114,9 +116,21 @@ export type GalleryInfo = {
 	id: string;
 };
 
-const getGalleries = async (id: string): Promise<GalleryInfo> => {
-	const galleriesUrl = `https://ltn.${contentsDomain}/galleries/${id}.js`;
-	const response = await fetch(galleriesUrl);
+type GetGalleriesParam = {
+	galleryId: string;
+	headers: Record<string, string>;
+};
+const getGalleries = async ({ galleryId, headers }: GetGalleriesParam): Promise<GalleryInfo> => {
+	const galleriesUrl = `https://ltn.${contentsDomain}/galleries/${galleryId}.js`;
+	const response = await fetch(galleriesUrl, {
+		headers: {
+			...headers,
+			accept: "*/*",
+		},
+	});
+	if (!response.ok) {
+		throw new Error(`Failed to fetch galleries info: ${response.status} ${response.statusText}`);
+	}
 	const galleriesJsText = await response.text();
 
 	const jsonText = galleriesJsText
@@ -128,31 +142,23 @@ const getGalleries = async (id: string): Promise<GalleryInfo> => {
 	return galleries;
 };
 
-type DownloadHitomiParam = {
-	additionalHeaders?: Record<string, string>;
-	skipVideo?: boolean;
+type DownloadImages = {
+	fileHashs: string[];
+	ggJs: GGJsCode;
+	headers: Record<string, string>;
 };
-
-const downloadImages = async (
-	galleries: GalleryInfo,
-	ggJs: GGJsCode,
-	{ additionalHeaders }: DownloadHitomiParam,
-) => {
-	const files = galleries.files.map((file) => {
-		const webpUrl = getWebpUrlFromHash(file.hash, ggJs);
-		return [file, webpUrl] as const;
+const downloadImages = async ({ fileHashs, ggJs, headers }: DownloadImages) => {
+	const webpUrls = fileHashs.map((fileHash) => {
+		const webpUrl = getWebpUrlFromHash(fileHash, ggJs);
+		return webpUrl;
 	});
 
-	const list = files.map(([file, webpUrl]) => {
+	const list = webpUrls.map((webpUrl) => {
 		const callback = async () => {
 			const response = await fetch(webpUrl, {
 				headers: {
-					...additionalHeaders,
+					...headers,
 					accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-					"accept-language": "ja-JP,ja;q=0.9",
-					"cache-control": "no-cache",
-					pragma: "no-cache",
-					referer: `https://hitomi.la/reader/${galleries.id}.html`,
 				},
 			});
 
@@ -161,31 +167,25 @@ const downloadImages = async (
 			}
 			return response;
 		};
-		return [file, callback] as const;
+		return callback;
 	});
 
 	return list;
 };
 
-const downloadVideo = async (galleries: GalleryInfo, { additionalHeaders }: DownloadHitomiParam) => {
-	if (galleries.videofilename === null) {
-		return null;
-	}
+type DownloadHitomiParam = {
+	videofilename: string;
+	headers: Record<string, string>;
+};
 
-	const streamFile = getStreamUrlFromVideoFilename(galleries.videofilename);
-
-	const file = { name: galleries.videofilename! };
+const downloadVideo = async ({ videofilename, headers }: DownloadHitomiParam) => {
+	const streamFile = getStreamUrlFromVideoFilename(videofilename);
 	const callback = async () => {
 		const response = await fetch(streamFile, {
 			headers: {
-				...additionalHeaders,
+				...headers,
 				accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-				"accept-language": "ja-JP,ja;q=0.9",
-				"cache-control": "no-cache",
-				pragma: "no-cache",
-				priority: "i",
 				range: "bytes=0-",
-				referer: `https://hitomi.la/reader/${galleries.id}.html`,
 			},
 		});
 
@@ -195,18 +195,39 @@ const downloadVideo = async (galleries: GalleryInfo, { additionalHeaders }: Down
 		return response;
 	};
 
-	return [file, callback] as const;
+	return callback;
 };
 
-export const downloadHitomiGalleries = async (id: string, { additionalHeaders, skipVideo = false }: DownloadHitomiParam) => {
+type DownloadHitomiGalleriesParam = {
+	galleryId: string;
+	additionalHeaders?: Record<string, string>;
+};
+type DownloadFileInfo =
+	| { type: "image"; file: GalleryInfoFile; callback: () => Promise<Response> }
+	| { type: "video"; file: { name: string }; callback: () => Promise<Response> };
+
+export const downloadHitomiGalleries = async ({ galleryId, additionalHeaders = {} }: DownloadHitomiGalleriesParam) => {
+	const headers = {
+		...additionalHeaders,
+		"accept-language": "ja-JP,ja;q=0.9",
+		"cache-control": "no-cache",
+		pragma: "no-cache",
+		referer: `https://hitomi.la/reader/${galleryId}.html`,
+	};
 	const ggJs = await getGGJsCode();
-	const galleries = await getGalleries(id);
+	const galleries = await getGalleries({ galleryId, headers });
 
-	const imageList = await downloadImages(galleries, ggJs, { additionalHeaders });
+	const list = [] as DownloadFileInfo[];
 
-	const video = !skipVideo ? await downloadVideo(galleries, { additionalHeaders }) : null;
+	const fileHashs = galleries.files.map((e) => e.hash);
+	const imageList = await downloadImages({ fileHashs, ggJs, headers });
+	for (const [index, file] of galleries.files.entries()) {
+		list.push({ type: "image", file, callback: imageList[index] });
+	}
 
-	const list = [...imageList, ...(video ? [video] : [])];
-
+	if (galleries.videofilename) {
+		const video = await downloadVideo({ videofilename: galleries.videofilename, headers });
+		list.push({ type: "video", file: { name: galleries.videofilename }, callback: video });
+	}
 	return [galleries, list] as const;
 };

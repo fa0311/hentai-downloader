@@ -32,9 +32,9 @@ const exportCbz = async (galleries: GalleryInfo, downloadDir: string) => {
 	return galleries.id;
 };
 
-export const downloadHitomiManga = async (galleryId: string) => {
+export const downloadHitomiManga = async (galleryId: string, skipVideo: boolean) => {
 	const additionalHeaders = await getChromeHeader();
-	const [galleries, tasks] = await downloadHitomiGalleries(galleryId, { additionalHeaders, skipVideo: false });
+	const [galleries, allTasks] = await downloadHitomiGalleries({ galleryId, additionalHeaders });
 
 	const downloadDir = await ensureDirExists(path.join(env.DOWNLOAD_PATH, String(galleries.id)));
 
@@ -45,14 +45,16 @@ export const downloadHitomiManga = async (galleryId: string) => {
 	const backoff = exponentialBackoff({ baseDelayMs: 500, maxRetries: 10 });
 
 	console.time("download");
+
+	const task = skipVideo ? allTasks.filter((t) => t.type !== "video") : allTasks;
 	await Promise.all(
-		tasks.map(async ([file, task]) => {
+		task.map(async (task) => {
 			const release = await semaphore.runExclusive(async () => {
-				return backoff(async () => task());
+				return backoff(async () => task.callback());
 			});
 			const arrayBuffer = await release.arrayBuffer();
 			const buffer = Buffer.from(arrayBuffer);
-			await fs.writeFile(path.join(downloadDir, file.name), buffer);
+			await fs.writeFile(path.join(downloadDir, task.file.name), buffer);
 		}),
 	);
 
@@ -105,6 +107,6 @@ export const downloadHitomiMangaList = async (
 			continue;
 		}
 		console.log(`Downloading gallery ID: ${galleryId}`);
-		await downloadHitomiManga(galleryId);
+		await downloadHitomiManga(galleryId, false);
 	}
 };
