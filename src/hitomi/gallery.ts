@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { HentaiFatalError, HentaiHttpError, HentaiParseError } from "./error";
 
 const contentsDomain = "gold-usergeneratedcontent.net";
 
@@ -17,7 +18,7 @@ const getGGJsCode = async (): Promise<GGJsCode> => {
 
 	const bMatch = /b:\s*'(\d+)\/'/.exec(ggJsText);
 	if (!bMatch) {
-		throw new Error("Failed to extract directory1 token");
+		throw new HentaiParseError("Failed to extract 'b' value from gg.js");
 	}
 
 	const caseMatches = [...ggJsText.matchAll(/case\s+(\d+):/g)];
@@ -25,7 +26,7 @@ const getGGJsCode = async (): Promise<GGJsCode> => {
 
 	const oMatches = [...ggJsText.matchAll(/o\s*=\s*(\d+);/g)];
 	if (oMatches.length < 2) {
-		throw new Error("Failed to extract 'o' values");
+		throw new HentaiParseError("Failed to extract 'o' values from gg.js");
 	}
 	const defaultO = oMatches[0][1];
 	const matchO = oMatches[1][1];
@@ -46,7 +47,7 @@ const getWebpUrlFromHash = (hash: string, ggJs: GGJsCode): string => {
 
 	const dir2PartArray = /^.*(..)(.)$/.exec(hash);
 	if (!dir2PartArray) {
-		throw new Error("Invalid hash format");
+		throw new HentaiFatalError(`Invalid hash format: ${hash}`);
 	}
 	const directory2 = parseInt(dir2PartArray[2] + dir2PartArray[1], 16).toString();
 
@@ -113,11 +114,11 @@ export type GalleryInfo = {
 		  }[]
 		| null;
 	videofilename: string | null; // ?
-	id: string;
+	id: number;
 };
 
 type GetGalleriesParam = {
-	galleryId: string;
+	galleryId: number;
 	headers: Record<string, string>;
 };
 const getGalleries = async ({ galleryId, headers }: GetGalleriesParam): Promise<GalleryInfo> => {
@@ -129,7 +130,7 @@ const getGalleries = async ({ galleryId, headers }: GetGalleriesParam): Promise<
 		},
 	});
 	if (!response.ok) {
-		throw new Error(`Failed to fetch galleries info: ${response.status} ${response.statusText}`);
+		throw new HentaiHttpError(`Failed to fetch galleries: ${galleriesUrl} - ${response.status} ${response.statusText}`);
 	}
 	const galleriesJsText = await response.text();
 
@@ -161,10 +162,6 @@ const downloadImages = async ({ fileHashs, ggJs, headers }: DownloadImages) => {
 					accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
 				},
 			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to download: ${webpUrl} - ${response.status} ${response.statusText}`);
-			}
 			return response;
 		};
 		return callback;
@@ -188,10 +185,6 @@ const downloadVideo = async ({ videofilename, headers }: DownloadHitomiParam) =>
 				range: "bytes=0-",
 			},
 		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to download: ${streamFile} - ${response.status} ${response.statusText}`);
-		}
 		return response;
 	};
 
@@ -199,7 +192,7 @@ const downloadVideo = async ({ videofilename, headers }: DownloadHitomiParam) =>
 };
 
 type DownloadHitomiGalleriesParam = {
-	galleryId: string;
+	galleryId: number;
 	additionalHeaders?: Record<string, string>;
 };
 type DownloadFileInfo =

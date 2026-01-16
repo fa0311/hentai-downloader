@@ -46,15 +46,15 @@ export const getNozomiUrls = ({ artists, series, characters, groups, type, langu
 };
 
 type DownloadNozomiListParam = {
+	query: SearchQuery;
 	additionalHeaders?: Record<string, string>;
 };
 
-export const downloadHitomiNozomiList = async (query: SearchQuery, { additionalHeaders }: DownloadNozomiListParam) => {
+export const downloadHitomiNozomiList = async ({ query, additionalHeaders }: DownloadNozomiListParam) => {
 	const nozomiUrls = getNozomiUrls(query);
 
 	const tasks = nozomiUrls.map((url) => {
 		return async () => {
-			console.log(`Downloading nozomi list from: ${url}`);
 			const response = await fetch(url, {
 				headers: {
 					...additionalHeaders,
@@ -63,13 +63,15 @@ export const downloadHitomiNozomiList = async (query: SearchQuery, { additionalH
 					pragma: "no-cache",
 				},
 			});
-
-			if (!response.ok && response.status !== 206 && response.status !== 200) {
-				throw new Error(`Failed to download: ${url} - ${response.status} ${response.statusText}`);
-			}
 			return response;
 		};
 	});
 
 	return tasks;
+};
+
+export const extractNozomiGalleryIds = (arrayBuffer: ArrayBuffer): number[] => {
+	const view = new DataView(arrayBuffer);
+	const entries = view.byteLength / 4;
+	return Array.from({ length: entries }, (_, index) => view.getInt32(index * 4, false));
 };

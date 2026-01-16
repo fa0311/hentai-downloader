@@ -6,7 +6,7 @@ const urlSchema = z.url();
 const galleryDirList = ["cg", "doujinshi", "manga", "gamecg", "imageset", "anime"] as const;
 const listDirList = ["artist", "group", "series", "character", "type", "tag"] as const;
 
-export const parseHitomiUrl = (url: string): SearchQuery | string => {
+export const parseHitomiUrl = (url: string): SearchQuery | number => {
 	const parsedUrl = new URL(urlSchema.parse(url));
 	const galleryDir = galleryDirList.join("|");
 	const listDir = listDirList.join("|");
@@ -37,7 +37,7 @@ export const parseHitomiUrl = (url: string): SearchQuery | string => {
 
 	const galleryMatch = galleryPattern.exec(parsedUrl.href);
 	if (galleryMatch) {
-		return galleryMatch.pathname.groups.id!;
+		return Number(galleryMatch.pathname.groups.id!);
 	}
 	const listMatch = listPattern.exec(parsedUrl.href);
 	if (listMatch) {
