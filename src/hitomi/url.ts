@@ -35,6 +35,12 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 		pathname: "/search.html",
 	});
 
+	const allPattern = new URLPattern({
+		protocol: "https:",
+		hostname: "hitomi.la",
+		pathname: "/",
+	});
+
 	const galleryMatch = galleryPattern.exec(parsedUrl.href);
 	if (galleryMatch) {
 		return Number(galleryMatch.pathname.groups.id!);
@@ -118,6 +124,19 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 			],
 			language: args.find(([k]) => k === "language")?.[1] ?? "all",
 			type: args.find(([k]) => k === "type")?.[1],
+		};
+	}
+
+	const allMatch = allPattern.exec(parsedUrl.href);
+	if (allMatch) {
+		return {
+			artists: [],
+			groups: [],
+			series: [],
+			characters: [],
+			tags: [],
+			language: "all",
+			type: undefined,
 		};
 	}
 

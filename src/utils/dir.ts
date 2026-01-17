@@ -12,39 +12,51 @@ export const ensureDirExists = async (dirPath: string) => {
 	return dirPath;
 };
 
+export type OutputHandler = {
+	writeFile: (filename: string, output: string) => void;
+	writeStream: (filename: string, readStream: NodeJS.ReadableStream) => void;
+};
+
+type OutputCallback = (descriptor: OutputHandler) => Promise<void>;
+
 export const outputDir = async (basePath: string) => {
 	await ensureDirExists(basePath);
-	return {
-		writeFile: async (filename: string, output: string) => {
-			await fs.promises.writeFile(path.join(basePath, filename), output);
-		},
-		writeStream: async (filename: string, readStream: any) => {
-			const writeStream = fs.createWriteStream(path.join(basePath, filename));
-			await stream.promises.pipeline(readStream, writeStream);
-		},
+	const promises: Promise<void>[] = [];
+
+	return async (callback: OutputCallback) => {
+		await callback({
+			writeFile: (filename: string, output: string) => {
+				promises.push(fs.promises.writeFile(path.join(basePath, filename), output, { flush: true }));
+			},
+			writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
+				const writeStream = fs.createWriteStream(path.join(basePath, filename), { flush: true });
+				promises.push(stream.promises.pipeline(readStream, writeStream));
+			},
+		});
+		await Promise.all(promises);
 	};
 };
 
-export const outputZip = async (basePath: string, filename: string) => {
-	await ensureDirExists(basePath);
+export const outputZip = async (filePath: string) => {
+	await ensureDirExists(path.dirname(filePath));
 	const zip = new yazl.ZipFile();
-	const writeStream = fs.createWriteStream(path.join(basePath, filename));
+	const writeStream = fs.createWriteStream(filePath, { flush: true });
 	const pipeline = stream.promises.pipeline(zip.outputStream, writeStream);
+	return async (callback: OutputCallback) => {
+		await callback({
+			writeFile: (filename: string, output: string) => {
+				zip.addBuffer(Buffer.from(output, "utf-8"), filename, {
+					compress: false,
+				});
+			},
+			writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
+				zip.addReadStream(readStream, filename, {
+					compress: false,
+				});
+			},
+		});
 
-	return {
-		writeFile: (filename: string, output: string) => {
-			zip.addBuffer(Buffer.from(output, "utf-8"), filename, {
-				compress: true,
-			});
-		},
-		writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
-			zip.addReadStream(readStream, filename, {
-				compress: false,
-			});
-		},
-		finalize: async () => {
-			zip.end();
-			await pipeline;
-		},
+		zip.end();
+		await pipeline;
 	};
 };

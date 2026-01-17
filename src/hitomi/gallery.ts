@@ -1,4 +1,5 @@
-import "dotenv/config";
+import fs from "node:fs";
+import { z } from "zod";
 import { HentaiFatalError, HentaiHttpError, HentaiParseError } from "./error";
 
 const contentsDomain = "gold-usergeneratedcontent.net";
@@ -41,7 +42,6 @@ const getGGJsCode = async (): Promise<GGJsCode> => {
 	};
 };
 
-// 画像ハッシュからwebpへのURLを生成する
 const getWebpUrlFromHash = (hash: string, ggJs: GGJsCode): string => {
 	const directory1 = ggJs.b;
 
@@ -56,66 +56,68 @@ const getWebpUrlFromHash = (hash: string, ggJs: GGJsCode): string => {
 	return `https://${subdomain}.${contentsDomain}/${directory1}/${directory2}/${hash}.webp`;
 };
 
-// 動画ファイル名から動画URLを生成する
 const getStreamUrlFromVideoFilename = (videoFilename: string): string => {
 	return `https://streaming.${contentsDomain}/videos/${videoFilename}`;
 };
 
-type GalleryInfoFile = {
-	hash: string;
-	height: number;
-	width: number;
-	name: string;
-	hasavif: boolean;
-};
+export const GalleryInfoFileSchema = z.object({
+	hash: z.string(),
+	height: z.number(),
+	width: z.number(),
+	name: z.string(),
+	hasavif: z.union([z.literal(0), z.literal(1)]).transform((val) => val === 1),
+});
+export type GalleryInfoFile = z.infer<typeof GalleryInfoFileSchema>;
 
-export type GalleryInfo = {
-	files: GalleryInfoFile[];
-	language_localname: string;
-	blocked: number;
-	date: string;
-	characters: {
-		character: string;
-		url: string;
-	}[];
-	datepublished: string;
-	japanese_title: string;
-	galleryurl: string;
-	languages: string[]; // ?
-	related: number[];
-	video: null; // ?
-	type: string;
-	scene_indexes: number[]; // ?
-	language_url: string;
-	tags: {
-		male?: "1" | "";
-		url: string;
-		tag: string;
-		flame?: "1" | "";
-	}[];
-	title: string;
-	language: string;
-	parodys:
-		| {
-				parody: string;
-				url: string;
-		  }[]
-		| null;
-	artists:
-		| {
-				artist: string;
-				url: string;
-		  }[]
-		| null;
-	groups:
-		| {
-				group: string;
-				url: string;
-		  }[]
-		| null;
-	videofilename: string | null; // ?
-	id: number;
-};
+export const GalleryInfoSchema = z
+	.object({
+		language_localname: z.string(),
+		language_url: z.string(),
+		japanese_title: z.string().optional(),
+		id: z.transform((val) => Number(val)),
+		title: z.string(),
+		language: z.string(),
+		galleryurl: z.string(),
+		characters: z.array(z.object({ character: z.string(), url: z.string() })).default([]),
+		datepublished: z.string().optional(),
+		related: z.array(z.number()),
+		videofilename: z.string().optional(),
+		video: z.string().optional(),
+		artists: z.array(z.object({ artist: z.string(), url: z.string() })).default([]),
+		date: z.string().transform((val) => new Date(val)),
+		blocked: z.literal(0),
+		type: z.string(),
+		parodys: z.array(z.object({ parody: z.string(), url: z.string() })).default([]),
+		files: z.array(GalleryInfoFileSchema),
+		scene_indexes: z.array(z.number()),
+		tags: z.array(
+			z.object({
+				male: z.transform((val) => Boolean(val)),
+				url: z.string(),
+				tag: z.string(),
+				female: z.transform((val) => Boolean(val)),
+			}),
+		),
+		languages: z.array(
+			z.object({
+				galleryid: z.number(),
+				language_localname: z.string(),
+				url: z.string(),
+				name: z.string(),
+			}),
+		),
+		groups: z
+			.array(
+				z.object({
+					group: z.string(),
+					url: z.string(),
+				}),
+			)
+			.default([]),
+	})
+	.strict();
+
+export type GalleryInfo = z.infer<typeof GalleryInfoSchema>;
 
 type GetGalleriesParam = {
 	galleryId: number;
@@ -138,8 +140,15 @@ const getGalleries = async ({ galleryId, headers }: GetGalleriesParam): Promise<
 		.replace(/^var galleryinfo = /, "")
 		.trim()
 		.replace(/;$/, "");
-	const galleries = JSON.parse(jsonText);
-
+	const prepared = z.preprocess(
+		(v) =>
+			Object.fromEntries(
+				Object.entries(v as Record<string, unknown>).map(([k, val]) => [k, val === null ? undefined : val]),
+			),
+		GalleryInfoSchema,
+	);
+	await fs.promises.writeFile("./src/hitomi/a.json", jsonText);
+	const galleries = prepared.parse(JSON.parse(jsonText));
 	return galleries;
 };
 
@@ -195,9 +204,14 @@ type DownloadHitomiGalleriesParam = {
 	galleryId: number;
 	additionalHeaders?: Record<string, string>;
 };
-type DownloadFileInfo =
+
+export type DownloadFileInfo =
 	| { type: "image"; file: GalleryInfoFile; callback: () => Promise<Response> }
-	| { type: "video"; file: { name: string }; callback: () => Promise<Response> };
+	| {
+			type: "video";
+			file: { name: string };
+			callback: () => Promise<Response>;
+	  };
 
 export const downloadHitomiGalleries = async ({ galleryId, additionalHeaders = {} }: DownloadHitomiGalleriesParam) => {
 	const headers = {
@@ -219,8 +233,15 @@ export const downloadHitomiGalleries = async ({ galleryId, additionalHeaders = {
 	}
 
 	if (galleries.videofilename) {
-		const video = await downloadVideo({ videofilename: galleries.videofilename, headers });
-		list.push({ type: "video", file: { name: galleries.videofilename }, callback: video });
+		const video = await downloadVideo({
+			videofilename: galleries.videofilename,
+			headers,
+		});
+		list.push({
+			type: "video",
+			file: { name: galleries.videofilename },
+			callback: video,
+		});
 	}
 	return [galleries, list] as const;
 };
