@@ -1,10 +1,10 @@
 import { Args, Command, Flags } from "@oclif/core";
 import boxen from "boxen";
 import chalk from "chalk";
-import cliProgress from "cli-progress";
 import "dotenv/config";
-import logSymbols from "log-symbols";
 import { Readable } from "node:stream";
+import ErrorStackParser from "error-stack-parser";
+import logSymbols from "log-symbols";
 import {
 	createSafeRequest,
 	fillFilenamePlaceholders,
@@ -17,6 +17,7 @@ import { parseHitomiUrl } from "./hitomi/url";
 import { galleryInfoToComicInfo } from "./utils/comicInfo";
 import { outputDir, outputZip } from "./utils/dir";
 import { getChromeHeader } from "./utils/header";
+import { progress } from "./utils/progress";
 import { initProxy } from "./utils/proxy";
 
 const parseInput = async (input: string, additionalHeaders?: Record<string, string>) => {
@@ -30,25 +31,6 @@ const parseInput = async (input: string, additionalHeaders?: Record<string, stri
 		} else {
 			return await getHitomiMangaList({ query: parsedUrl, additionalHeaders });
 		}
-	}
-};
-
-const progress = async (callback: (progress: cliProgress.MultiBar) => Promise<void>) => {
-	const multibar = new cliProgress.MultiBar(
-		{
-			clearOnComplete: false,
-			hideCursor: true,
-			format: `⏳  ${chalk.cyan("{bar}")} ${chalk.bold("{percentage}%")} | {value}/{total} | ETA:{eta}s`,
-			linewrap: true,
-			barsize: 80,
-			stream: process.stdout,
-		},
-		cliProgress.Presets.shades_classic,
-	);
-	try {
-		await callback(multibar);
-	} finally {
-		multibar.stop();
 	}
 };
 
@@ -84,6 +66,11 @@ export class MainCommand extends Command {
 			description: "Skip video files",
 			default: true,
 		}),
+		quiet: Flags.boolean({
+			char: "q",
+			description: "Suppress non-error output",
+			default: false,
+		}),
 		help: Flags.help(),
 		version: Flags.version(),
 	};
@@ -97,32 +84,46 @@ export class MainCommand extends Command {
 		const safeRequest = await createSafeRequest();
 		if (initProxy()) this.log(chalk.cyan(`${logSymbols.info} Proxy enabled`));
 
-		await progress(async (multibar) => {
-			const b1 = galleryIds.length > 1 ? multibar.create(galleryIds.length, 0, { filename: "Overall" }) : undefined;
-
-			for (const galleryId of galleryIds) {
-				const [galleries, allTasks] = await downloadHitomiGalleries({
-					galleryId,
-					additionalHeaders,
-				});
-				const tasks = flags.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
-				const pathname = fillGalleryPlaceholders(args.output, galleries);
-				const fd = isZipFile(pathname) ? await outputZip(pathname) : await outputDir(pathname);
-				const b2 = multibar.create(tasks.length, 0);
-				await fd(async (fd) => {
-					if (flags.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
-					if (flags.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
-					const promises = tasks.map(async (task, i, all) => {
-						const filename = fillFilenamePlaceholders(args.filename, i, all.length, task.file);
-						const response = await safeRequest(() => task.callback());
-						const readStream = Readable.fromWeb(response.body!);
-						fd.writeStream(filename, readStream);
-						b2.increment();
+		await progress({ hidden: flags.quiet }, async (multiBar) => {
+			const opt = { total: galleryIds.length, filename: "Overall", hidden: galleryIds.length <= 1 };
+			await multiBar.create(opt, async (b1) => {
+				for (const galleryId of galleryIds) {
+					const [galleries, allTasks] = await downloadHitomiGalleries({ galleryId, additionalHeaders });
+					const tasks = flags.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
+					const pathname = fillGalleryPlaceholders(args.output, galleries);
+					const fd = isZipFile(pathname) ? await outputZip(pathname) : await outputDir(pathname);
+					const opt = { total: tasks.length, filename: galleries.japanese_title ?? galleries.title, hidden: false };
+					await multiBar.create(opt, async (b2) => {
+						await fd(async (fd) => {
+							if (flags.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
+							if (flags.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
+							const promises = tasks.map(async (task, i, all) => {
+								const filename = fillFilenamePlaceholders(args.filename, i, all.length, task.file);
+								const response = await safeRequest(() => task.callback());
+								const readStream = Readable.fromWeb(response.body!);
+								fd.writeStream(filename, readStream);
+								b2.increment();
+							});
+							await Promise.all(promises);
+						});
 					});
-					await Promise.all(promises);
-				});
-				b1?.increment();
-			}
+					b1.increment();
+				}
+			});
 		});
+	}
+	async catch(error: Error) {
+		const frames = ErrorStackParser.parse(error);
+		const className = (error as any)?.constructor?.name ?? "<unknown>";
+		const trace = boxen(chalk.gray(frames.map((f) => `at ${f.toString()}`).join("\n")), {
+			padding: 1,
+			borderColor: "gray",
+		});
+		this.log(
+			boxen(`${chalk.red(`${chalk.bold(className)}\n\n${error.message}`)}\n\n${trace}`, {
+				padding: 1,
+				borderColor: "red",
+			}),
+		);
 	}
 }

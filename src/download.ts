@@ -1,5 +1,5 @@
-import { Semaphore } from "async-mutex";
 import path from "node:path";
+import { Semaphore } from "async-mutex";
 import { HentaiHttpError } from "./hitomi/error";
 import type { DownloadFileInfo, GalleryInfo } from "./hitomi/gallery";
 import { downloadHitomiNozomiList, extractNozomiGalleryIds, type SearchQuery } from "./hitomi/list";

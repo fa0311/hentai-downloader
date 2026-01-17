@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/main.js",
     "dev:bin": "tsx src/bin.ts",
+    "dev:scheduler": "tsx src/scheduler.ts",
     "test": "vitest",
     "test:run": "vitest run"
   },
@@ -23,11 +24,14 @@
     "boxen": "^8.0.1",
     "chalk": "^5.6.2",
     "cli-progress": "^3.12.0",
+    "cli-truncate": "^5.1.1",
     "cron": "^4.4.0",
     "dotenv": "^17.2.3",
+    "error-stack-parser": "^2.1.4",
     "fetch-socks": "^1.3.2",
     "log-symbols": "^7.0.1",
     "roaring": "^2.7.0",
+    "string-width": "^8.1.0",
     "xmlbuilder2": "^4.0.3",
     "yazl": "^3.3.1",
     "zod": "^4.3.5"

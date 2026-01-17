@@ -1,7 +1,7 @@
-import { type Command, flush, handle } from "@oclif/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { type Command, flush, handle } from "@oclif/core";
 import { MainCommand } from "./command";
 
 export const COMMANDS: Record<string, Command.Class> = {
