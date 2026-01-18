@@ -48,20 +48,20 @@ export const getHitomiMangaList = async ({ query, additionalHeaders }: GetHitomi
 export const fillGalleryPlaceholders = (template: string, gallery: GalleryInfo) => {
 	const date = new Date(gallery.date ?? gallery.datepublished);
 	return template
-		.replace("{id}", String(gallery.id))
-		.replace("{title}", gallery.title)
-		.replace("{type}", gallery.type)
-		.replace("{language}", String(gallery.language))
-		.replace("{year}", String(date.getFullYear()).padStart(4, "0"))
-		.replace("{month}", String(date.getMonth() + 1).padStart(2, "0"))
-		.replace("{day}", String(date.getDate()).padStart(2, "0"))
-		.replace("{now_year}", String(new Date().getFullYear()).padStart(4, "0"))
-		.replace("{now_month}", String(new Date().getMonth() + 1).padStart(2, "0"))
-		.replace("{now_day}", String(new Date().getDate()).padStart(2, "0"))
-		.replace("{now_hour}", String(new Date().getHours()).padStart(2, "0"))
-		.replace("{now_minute}", String(new Date().getMinutes()).padStart(2, "0"))
-		.replace("{now_second}", String(new Date().getSeconds()).padStart(2, "0"))
-		.replace("{random}", String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, "0"));
+		.replaceAll("{id}", String(gallery.id))
+		.replaceAll("{title}", gallery.title)
+		.replaceAll("{type}", gallery.type)
+		.replaceAll("{language}", String(gallery.language))
+		.replaceAll("{year}", String(date.getFullYear()).padStart(4, "0"))
+		.replaceAll("{month}", String(date.getMonth() + 1).padStart(2, "0"))
+		.replaceAll("{day}", String(date.getDate()).padStart(2, "0"))
+		.replaceAll("{now_year}", String(new Date().getFullYear()).padStart(4, "0"))
+		.replaceAll("{now_month}", String(new Date().getMonth() + 1).padStart(2, "0"))
+		.replaceAll("{now_day}", String(new Date().getDate()).padStart(2, "0"))
+		.replaceAll("{now_hour}", String(new Date().getHours()).padStart(2, "0"))
+		.replaceAll("{now_minute}", String(new Date().getMinutes()).padStart(2, "0"))
+		.replaceAll("{now_second}", String(new Date().getSeconds()).padStart(2, "0"))
+		.replaceAll("{random}", String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, "0"));
 };
 
 export const fillFilenamePlaceholders = (template: string, index: number, all: number, filename: DownloadFileInfo["file"]) => {
@@ -70,13 +70,13 @@ export const fillFilenamePlaceholders = (template: string, index: number, all: n
 	const no = String(index + 1).padStart(String(all).length, "0");
 
 	return template
-		.replace("{index}", String(index))
-		.replace("{no}", no)
-		.replace("{name}", base)
-		.replace("{ext}", ext)
-		.replace("{height}", "height" in filename ? String(filename.height) : "unknown")
-		.replace("{width}", "width" in filename ? String(filename.width) : "unknown")
-		.replace("{hash}", "hash" in filename ? filename.hash : "unknown");
+		.replaceAll("{index}", String(index))
+		.replaceAll("{no}", no)
+		.replaceAll("{name}", base)
+		.replaceAll("{ext}", ext)
+		.replaceAll("{height}", "height" in filename ? String(filename.height) : "unknown")
+		.replaceAll("{width}", "width" in filename ? String(filename.width) : "unknown")
+		.replaceAll("{hash}", "hash" in filename ? filename.hash : "unknown");
 };
 
 export const isZipFile = (filename: string) => {

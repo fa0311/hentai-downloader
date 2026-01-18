@@ -142,13 +142,3 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 
 	throw new Error("Invalid Hitomi.la URL");
 };
-
-export const getHitomiGalleryIdFromUrl = (url: string): string => {
-	const parsedUrl = new URL(urlSchema.parse(url));
-	const match = /-(\d+)(?:\.html)?$/.exec(parsedUrl.pathname);
-	if (match) {
-		return match[1];
-	} else {
-		throw new Error("Invalid Hitomi.la gallery URL: Unable to extract gallery ID");
-	}
-};

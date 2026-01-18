@@ -7,60 +7,64 @@ const envSchema = z.object({
 	ALL_PROXY: z.string().optional(),
 });
 
-const parseProxyUrl = (proxyUrl: string[]) => {
-	const socket5 = new URLPattern({
+export const parseProxyUrl = (proxyUrl: string[]) => {
+	const socks5Pattern = new URLPattern({
 		protocol: "socks5:",
 	});
-	const socket4 = new URLPattern({
+	const socks4Pattern = new URLPattern({
 		protocol: "socks4:",
 	});
-	const socket5h = new URLPattern({
+	const socks5hPattern = new URLPattern({
 		protocol: "socks5h:",
 	});
-	const socket4a = new URLPattern({
+	const socks4aPattern = new URLPattern({
 		protocol: "socks4a:",
 	});
 
 	for (const proxy of proxyUrl) {
 		const url = new URL(proxy);
-		const socket5Match = socket5.exec(url);
-		if (socket5Match) {
+
+		const socks5Match = socks5Pattern.exec(url);
+		if (socks5Match) {
 			return {
 				type: 5 as const,
-				ipaddress: socket5Match.hostname.input,
-				port: Number(socket5Match.port) || 1080,
-				username: socket5Match.username.input || undefined,
-				password: socket5Match.password.input || undefined,
+				ipaddress: url.hostname,
+				port: url.port ? Number(url.port) : 1080,
+				username: url.username ? decodeURIComponent(url.username) : undefined,
+				password: url.password ? decodeURIComponent(url.password) : undefined,
 			};
 		}
-		const socket4Match = socket4.exec(url);
-		if (socket4Match) {
+
+		const socks4Match = socks4Pattern.exec(url);
+		if (socks4Match) {
 			return {
 				type: 4 as const,
-				ipaddress: socket4Match.hostname.input,
-				port: Number(socket4Match.port) || 1080,
-				username: socket4Match.username.input || undefined,
-				password: socket4Match.password.input || undefined,
+				ipaddress: url.hostname,
+				port: url.port ? Number(url.port) : 1080,
+				username: url.username ? decodeURIComponent(url.username) : undefined,
+				password: url.password ? decodeURIComponent(url.password) : undefined,
 			};
 		}
-		const socket5hMatch = socket5h.exec(url);
-		if (socket5hMatch) {
+
+		const socks5hMatch = socks5hPattern.exec(url);
+		if (socks5hMatch) {
 			return {
 				type: 5 as const,
-				host: socket5hMatch.hostname.input,
-				port: Number(socket5hMatch.port) || 1080,
-				username: socket5hMatch.username.input || undefined,
-				password: socket5hMatch.password.input || undefined,
+				host: url.hostname,
+				port: url.port ? Number(url.port) : 1080,
+				username: url.username ? decodeURIComponent(url.username) : undefined,
+				password: url.password ? decodeURIComponent(url.password) : undefined,
 			};
 		}
-		const socket4aMatch = socket4a.exec(url);
-		if (socket4aMatch) {
+
+		const socks4aMatch = socks4aPattern.exec(url);
+		if (socks4aMatch) {
 			return {
 				type: 4 as const,
-				host: socket4aMatch.hostname.input,
-				port: Number(socket4aMatch.port) || 1080,
-				username: socket4aMatch.username.input || undefined,
-				password: socket4aMatch.password.input || undefined,
+				host: url.hostname,
+				port: url.port ? Number(url.port) : 1080,
+				username: url.username ? decodeURIComponent(url.username) : undefined,
+				password: url.password ? decodeURIComponent(url.password) : undefined,
 			};
 		}
 	}
