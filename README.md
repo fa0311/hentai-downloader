@@ -11,10 +11,6 @@ A powerful CLI tool for downloading galleries with advanced features like schedu
 * [Clone the repository](#clone-the-repository)
 * [Install dependencies](#install-dependencies)
 * [Build the project](#build-the-project)
-* [Proxy configuration (optional)](#proxy-configuration-optional)
-* [Logging (for schedule command)](#logging-for-schedule-command)
-* [Timezone for scheduling](#timezone-for-scheduling)
-* [Health check files (optional)](#health-check-files-optional)
 * [Build the Docker image](#build-the-docker-image)
 * [Run with docker-compose](#run-with-docker-compose)
 * [Run in development mode](#run-in-development-mode)
@@ -96,7 +92,7 @@ EXAMPLES
 
   Resume from checkpoint
 
-    $ hentai-downloader download https://hitomi.la/artist/kinnotama-japanese.html --checkpoint=.checkpoint `
+    $ hentai-downloader download https://hitomi.la/artist/kinnotama-japanese.html --checkpoint=.checkpoint ^
       --ifExists=overwrite
 ```
 
@@ -184,31 +180,29 @@ pnpm build
 
 ## Configuration
 
-### Environment Variables
+### Global Configuration
 
-Create a `.env` file in the project root:
+#### Proxy (Optional)
+
+Proxy settings are available for both `download` and `schedule` commands.
+
+Use standard proxy environment variables with URL format.  
+Supported protocols: `socks5://`, `socks4://`, `socks5h://`, `socks4a://`
+
+Create a `.env` file:
 
 ```env
-# Proxy configuration (optional)
-PROXY_HOST=127.0.0.1
-PROXY_PORT=1080
-PROXY_TYPE=5  # 4 for SOCKS4, 5 for SOCKS5
-
-# Logging (for schedule command)
-LOG_LEVEL=info
-LOG_COLOR=true
-
-# Timezone for scheduling
+ALL_PROXY=socks5://127.0.0.1:1080
 TZ=Asia/Tokyo
-
-# Health check files (optional)
-HEARTBEAT_PATH=/path/to/heartbeat.txt
-LAST_SUCCESS_PATH=/path/to/last_success.txt
 ```
 
-### Schedule Configuration
+### Schedule Command Configuration
 
-Create a `schedule.json` file for scheduled downloads:
+The `schedule` command uses a JSON configuration file and environment variables.
+
+#### Configuration File
+
+Create a `schedule.json` file:
 
 ```json
 {
@@ -234,9 +228,27 @@ Create a `schedule.json` file for scheduled downloads:
 }
 ```
 
-## Placeholders
+#### Environment Variables
 
-### Output Path Placeholders
+Add to your `.env` file:
+
+```env
+LOG_LEVEL=info
+LOG_COLOR=true
+TZ=Asia/Tokyo
+HEARTBEAT_PATH=/path/to/heartbeat.txt
+LAST_SUCCESS_PATH=/path/to/last_success.txt
+```
+
+- `LOG_LEVEL`: Log level (fatal, error, warn, info, debug, trace, silent)
+- `LOG_COLOR`: Enable colored output (true/false)
+- `TZ`: Timezone
+- `HEARTBEAT_PATH`: Heartbeat file path (optional)
+- `LAST_SUCCESS_PATH`: Last success timestamp file path (optional)
+
+### Placeholders
+
+**Output path placeholders:**
 
 - `{id}` - Gallery ID
 - `{title}` - Gallery title
@@ -244,7 +256,7 @@ Create a `schedule.json` file for scheduled downloads:
 - `{type}` - Gallery type
 - `{language}` - Language
 
-### Filename Placeholders
+**Filename placeholders:**
 
 - `{no}` - File number (zero-padded)
 - `{name}` - Original filename
