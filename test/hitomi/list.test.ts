@@ -63,7 +63,7 @@ describe("getNozomiUrls", () => {
 			language: "japanese",
 			tags: [],
 		});
-		expect(urls).toEqual(["https://ltn.gold-usergeneratedcontent.net/artist/artist%20name-japanese.nozomi"]);
+		expect(urls).toEqual([`https://ltn.gold-usergeneratedcontent.net/artist/${encodeURIComponent("artist name")}-japanese.nozomi`]);
 	});
 });
 

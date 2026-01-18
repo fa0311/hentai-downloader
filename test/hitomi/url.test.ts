@@ -107,6 +107,44 @@ describe("parseHitomiUrl", () => {
 				type: "doujinshi",
 			});
 		});
+
+		it("parses search with female prefix", () => {
+			const result = parseHitomiUrl(`https://hitomi.la/search.html?${encodeURIComponent("female:big_breasts")}`);
+			expect(result).toEqual({
+				artists: [],
+				series: [],
+				characters: [],
+				groups: [],
+				language: "all",
+				tags: ["female:big_breasts"],
+				type: undefined,
+			});
+		});
+
+		it("parses search with tag and female prefix", () => {
+			const result = parseHitomiUrl(
+				`https://hitomi.la/search.html?${encodeURIComponent("tag:loli")} ${encodeURIComponent("female:big_breasts")}`,
+			);
+			expect(result).toMatchObject({
+				tags: ["loli", "female:big_breasts"],
+			});
+		});
+
+		it("parses search with language parameter", () => {
+			const result = parseHitomiUrl(
+				`https://hitomi.la/search.html?${encodeURIComponent("artist:mignon")} ${encodeURIComponent("language:japanese")}`,
+			);
+			expect(result).toMatchObject({
+				language: "japanese",
+			});
+		});
+
+		it("parses search with value containing colon", () => {
+			const result = parseHitomiUrl(`https://hitomi.la/search.html?${encodeURIComponent("tag:female:loli")}`);
+			expect(result).toMatchObject({
+				tags: ["female:loli"],
+			});
+		});
 	});
 
 	describe("root URLs", () => {
