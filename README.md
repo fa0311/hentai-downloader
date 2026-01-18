@@ -1,289 +1,194 @@
-# hentai-downloader
+# Hentai Downloader
 
-A powerful CLI tool for downloading galleries with advanced features like scheduling, checkpointing, and batch processing.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[![License](https://img.shields.io/github/license/fa0311/hentai-downloader)](https://github.com/fa0311/hentai-downloader/blob/main/LICENSE)
+A powerful CLI tool for downloading galleries from Hitomi.la. Features scheduled execution, checkpoint functionality, proxy support, and more for an efficient and robust download experience.
 
-<!-- toc -->
-* [hentai-downloader](#hentai-downloader)
-* [Usage](#usage)
-* [Commands](#commands)
-* [Clone the repository](#clone-the-repository)
-* [Install dependencies](#install-dependencies)
-* [Build the project](#build-the-project)
-* [Run in development mode](#run-in-development-mode)
-* [Run tests](#run-tests)
-* [Build the project](#build-the-project)
-<!-- tocstop -->
+## ✨ Features
 
-# Usage
+- **Command Line Tool**: Download galleries instantly by ID or URL
+- **Scheduler**: Automate periodic download tasks with cron expressions
+- **Checkpoint System**: Resume interrupted downloads automatically on next execution
+- **Docker Support**: Easy deployment with docker-compose
+- **Proxy Support**: SOCKS4/5 proxy compatible
+- **Flexible Output**: Output as directory or ZIP file, with ComicInfo.xml generation
 
-<!-- usage -->
-```sh-session
-$ npm install -g hentai-downloader
-$ hentai-downloader COMMAND
-running command...
-$ hentai-downloader (--version|-v)
-hentai-downloader/1.0.0 win32-x64 node-v24.12.0
-$ hentai-downloader --help [COMMAND]
-USAGE
-  $ hentai-downloader COMMAND
-...
-```
-<!-- usagestop -->
-
-# Commands
-
-<!-- commands -->
-* [`hentai-downloader download INPUT OUTPUT [FILENAME]`](#hentai-downloader-download-input-output-filename)
-* [`hentai-downloader help [COMMAND]`](#hentai-downloader-help-command)
-* [`hentai-downloader schedule [CONFIG]`](#hentai-downloader-schedule-config)
-
-## `hentai-downloader download INPUT OUTPUT [FILENAME]`
-
-Download galleries by ID or URL
-
-```
-USAGE
-  $ hentai-downloader download INPUT OUTPUT [FILENAME] [--metadata] [--comicInfo] [--videoSkip] [-q]
-    [--checkpoint <value>] [--ifExists error|skip|overwrite] [--help] [--version]
-
-ARGUMENTS
-  INPUT       http(s) URL or gallery ID to download
-  OUTPUT      [default: output/{id}] Output directory or file
-  [FILENAME]  [default: {no}{ext}] Output filename
-
-FLAGS
-  -q, --quiet               Suppress non-error output
-      --checkpoint=<value>  Path to checkpoint file
-      --comicInfo           Output ComicInfo.xml file
-      --help                Show CLI help.
-      --ifExists=<option>   [default: error] Behavior when file already exists
-                            <options: error|skip|overwrite>
-      --metadata            Output metadata file
-      --version             Show CLI version.
-      --videoSkip           Skip video files
-
-DESCRIPTION
-  Download galleries by ID or URL
-
-EXAMPLES
-  Download a gallery by ID
-
-    $ hentai-downloader download 1571033
-
-  Download with custom output directory
-
-    $ hentai-downloader download 1571033 output/{id}
-
-  Download as ZIP file
-
-    $ hentai-downloader download 1571033 output/{id}.zip
-
-  Download with custom filename pattern
-
-    $ hentai-downloader download 1571033 output/{id} "{no}-{name}{ext}"
-
-  Skip existing files instead of erroring
-
-    $ hentai-downloader download 1571033 --ifExists=skip
-
-  Resume from checkpoint
-
-    $ hentai-downloader download https://hitomi.la/artist/kinnotama-japanese.html --checkpoint=.checkpoint `
-      --ifExists=overwrite
-```
-
-_See code: [src/commands/download.ts](https://github.com/fa0311/hentai-downloader/blob/main/src/commands/download.ts)_
-
-## `hentai-downloader help [COMMAND]`
-
-Display help for hentai-downloader.
-
-```
-USAGE
-  $ hentai-downloader help [COMMAND...] [-n]
-
-ARGUMENTS
-  [COMMAND...]  Command to show help for.
-
-FLAGS
-  -n, --nested-commands  Include all nested commands in the output.
-
-DESCRIPTION
-  Display help for hentai-downloader.
-```
-
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.36/src/commands/help.ts)_
-
-## `hentai-downloader schedule [CONFIG]`
-
-Run scheduled downloads based on configuration file
-
-```
-USAGE
-  $ hentai-downloader schedule [CONFIG] [--runOnce] [--help] [--version]
-
-ARGUMENTS
-  [CONFIG]  [default: schedule.json] Path to the schedule configuration file
-
-FLAGS
-  --help     Show CLI help.
-  --runOnce
-  --version  Show CLI version.
-
-DESCRIPTION
-  Run scheduled downloads based on configuration file
-
-EXAMPLES
-  Run scheduled downloads with default config
-
-    $ hentai-downloader schedule
-
-  Run scheduled downloads with custom config
-
-    $ hentai-downloader schedule schedule.json
-
-  Run once without scheduling (useful for testing)
-
-    $ hentai-downloader schedule --runOnce
-```
-
-_See code: [src/commands/schedule.ts](https://github.com/fa0311/hentai-downloader/blob/main/src/commands/schedule.ts)_
-<!-- commandsstop -->
-
-## Features
-
-- 🚀 **Fast & Reliable**: Efficient batch download with retry mechanism
-- 📦 **Flexible Output**: Save as directories or ZIP archives
-- ⏱️ **Scheduling**: Automated downloads with cron expressions
-- 🔄 **Resume Support**: Checkpoint system to resume interrupted downloads
-- 📝 **Metadata**: Optional metadata and ComicInfo.xml generation
-- 🔒 **Proxy Support**: SOCKS5 proxy configuration via environment variables
-- 🎯 **Batch Processing**: Download multiple galleries from lists or URLs
-
-## Installation
+## 📚 Quick Start
 
 ```bash
-# Clone the repository
+# Download a gallery
+hentai-downloader download 1571033
+
+# Run scheduled downloads
+hentai-downloader schedule schedule.json
+```
+
+For detailed command options, see [COMMANDS.md](COMMANDS.md).
+
+## 📦 Installation
+
+### npm/pnpm
+
+```bash
+npm install -g hentai-downloader
+# or
+pnpm add -g hentai-downloader
+```
+
+### Docker
+
+```bash
+docker pull ghcr.io/fa0311/hentai-downloader:latest-scheduler
+```
+
+### Build from Source
+
+```bash
 git clone https://github.com/fa0311/hentai-downloader.git
 cd hentai-downloader
-
-# Install dependencies
 pnpm install
-
-# Build the project
 pnpm build
 ```
 
-## Configuration
+## 🐳 Docker Usage
 
-### Global Configuration
+### Using docker-compose
 
-#### Proxy (Optional)
+1. Create `schedule.json` (see configuration example below)
 
-Proxy settings are available for both `download` and `schedule` commands.
+2. Start with docker-compose
 
-Use standard proxy environment variables with URL format.  
-Supported protocols: `socks5://`, `socks4://`, `socks5h://`, `socks4a://`
-
-Create a `.env` file:
-
-```env
-ALL_PROXY=socks5://127.0.0.1:1080
-TZ=Asia/Tokyo
+```bash
+docker-compose up -d
 ```
 
-### Schedule Command Configuration
+## ⚙️ Configuration
 
-The `schedule` command uses a JSON configuration file and environment variables.
+### Schedule Configuration File (schedule.json)
 
-#### Configuration File
-
-Create a `schedule.json` file:
-
-```json
+```jsonc
 {
-  "cron": "0 */6 * * *",
-  "runOnInit": false,
-  "output": "output/{id}",
-  "filename": "{no}{ext}",
+  "cron": "0 0 * * *", // Cron expression (required)
+  "runOnInit": false, // Execute immediately on startup
   "queries": [
+    // Download targets
+    { "type": "id", "id": 1234567 },
+    { "type": "url", "url": "https://hitomi.la/artist/example.html" },
     {
-      "type": "id",
-      "id": 1571033
+      "type": "query",
+      "query": {
+        "artists": ["artist-name"],
+        "language": "japanese",
+        "tags": ["tag1", "tag2"],
+      },
     },
-    {
-      "type": "url",
-      "url": "https://hitomi.la/artist/kinnotama-japanese.html"
-    }
   ],
-  "checkpoint": ".checkpoint",
-  "metadata": false,
-  "comicInfo": true,
-  "videoSkip": true,
-  "ifExists": "skip"
+  "output": "output/{id}", // Output path (placeholders available)
+  "filename": "{no}{ext}", // Filename pattern
+  "videoSkip": true, // Skip video files
+  "comicInfo": true, // Generate ComicInfo.xml
+  "ifExists": "skip", // Existing file behavior: skip/overwrite/error
+  "checkpoint": "data/.checkpoint", // Checkpoint file path
 }
 ```
 
-#### Environment Variables
+For detailed configuration schema, see [src/utils/config.ts](src/utils/config.ts).
 
-Add to your `.env` file:
+### Environment Variables
 
-```env
-LOG_LEVEL=info
-LOG_COLOR=true
-TZ=Asia/Tokyo
-HEARTBEAT_PATH=/path/to/heartbeat.txt
-LAST_SUCCESS_PATH=/path/to/last_success.txt
+Can be set via `.env` file or system environment variables.
+
+#### Proxy Settings (All commands)
+
+```bash
+# SOCKS5 proxy example
+ALL_PROXY=socks5://username:password@proxy.example.com:1080
+# or
+HTTPS_PROXY=socks5://proxy.example.com:1080
+HTTP_PROXY=socks5://proxy.example.com:1080
 ```
 
-- `LOG_LEVEL`: Log level (fatal, error, warn, info, debug, trace, silent)
-- `LOG_COLOR`: Enable colored output (true/false)
-- `TZ`: Timezone
-- `HEARTBEAT_PATH`: Heartbeat file path (optional)
-- `LAST_SUCCESS_PATH`: Last success timestamp file path (optional)
+Supported protocols: `socks5://`, `socks4://`, `socks5h://`, `socks4a://`
 
-### Placeholders
+#### Schedule Command Only
 
-**Output path placeholders:**
+```bash
+# Log level (fatal/error/warn/info/debug/trace/silent)
+LOG_LEVEL=info
+
+# Enable colored logs (true/false)
+LOG_COLOR=true
+
+# Timezone (for cron schedule)
+TZ=Asia/Tokyo
+
+# Heartbeat timestamp file (updated every 60 seconds)
+HEARTBEAT_PATH=/app/data/heartbeat
+
+# Last success timestamp file (updated on successful download)
+LAST_SUCCESS_PATH=/app/data/last_success
+```
+
+## 🎨 Placeholders
+
+Available placeholders for output paths and filenames:
+
+### Output Path
 
 - `{id}` - Gallery ID
-- `{title}` - Gallery title
-- `{japanese_title}` - Japanese title (if available)
-- `{type}` - Gallery type
-- `{language}` - Language
 
-**Filename placeholders:**
+### Filename
 
-- `{no}` - File number (zero-padded)
+- `{no}` - File number (sequential)
 - `{name}` - Original filename
 - `{ext}` - File extension
-- `{hash}` - File hash
 
-## Docker Support
+**Examples:**
 
 ```bash
-docker run --rm -v ${PWD}/output:/app/output ghcr.io/fa0311/hentai-downloader download 1571033
+# Directory output
+hentai-downloader download 1571033 "output/{id}"
+
+# ZIP output
+hentai-downloader download 1571033 "output/{id}.zip"
+
+# Custom filename
+hentai-downloader download 1571033 "output/{id}" "{no}-{name}{ext}"
 ```
 
-## Development
+## 🛠️ Development
+
+### Requirements
+
+- Node.js (v24+ recommended)
+- pnpm
+
+### Build
 
 ```bash
-# Run in development mode
-pnpm dev download 1571033
-
-# Run tests
-pnpm test
-
-# Build the project
+pnpm install
 pnpm build
 ```
 
-## License
+### Test
 
-MIT License - see [LICENSE](LICENSE) file for details.
+```bash
+pnpm test        # watch mode
+pnpm test:run    # single run
+```
 
-## Author
+### Development Mode
 
-fa0311
+```bash
+pnpm dev <command>
+```
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details
+
+## 📖 Documentation
+
+- [COMMANDS.md](COMMANDS.md) - Detailed command reference
+- [src/utils/config.ts](src/utils/config.ts) - Configuration file type definitions
+- [src/utils/env.ts](src/utils/env.ts) - Environment variable type definitions

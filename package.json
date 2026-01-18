@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",
-    "build:readme": "oclif readme",
+    "build:readme": "oclif readme --readme-path COMMANDS.md",
     "start": "node ./bin/run.js",
     "dev": "node ./bin/dev.js",
     "test": "vitest",
@@ -25,13 +25,7 @@
     ],
     "topicSeparator": " ",
     "topics": {},
-    "repositoryPrefix": "<%- repo %>/blob/main/<%- commandPath %>",
-    "additionalHelpFlags": [
-      "-h"
-    ],
-    "additionalVersionFlags": [
-      "-v"
-    ]
+    "repositoryPrefix": "<%- repo %>/blob/main/<%- commandPath %>"
   },
   "bin": {
     "hentai-downloader": "./bin/run.js"

@@ -40,24 +40,20 @@ export default class Download extends Command {
 			command: "<%= config.bin %> download 1571033",
 		},
 		{
-			description: "Download with custom output directory",
-			command: "<%= config.bin %> download 1571033 output/{id}",
+			description: "Download a gallery by URL",
+			command: "<%= config.bin %> download https://hitomi.la/artist/kinnotama-japanese.html",
 		},
 		{
-			description: "Download as ZIP file",
-			command: "<%= config.bin %> download 1571033 output/{id}.zip",
+			description: "Download as CBZ file",
+			command: "<%= config.bin %> download 1571033 output/{id}.cbz",
 		},
 		{
 			description: "Download with custom filename pattern",
 			command: '<%= config.bin %> download 1571033 output/{id} "{no}-{name}{ext}"',
 		},
 		{
-			description: "Skip existing files instead of erroring",
-			command: "<%= config.bin %> download 1571033 --ifExists=skip",
-		},
-		{
 			description: "Resume from checkpoint",
-			command: "<%= config.bin %> download https://hitomi.la/artist/kinnotama-japanese.html --checkpoint=.checkpoint --ifExists=overwrite",
+			command: "<%= config.bin %> download 1571033 --checkpoint=.checkpoint --ifExists=overwrite",
 		},
 	];
 
