@@ -29,7 +29,7 @@ FROM runtime AS scheduler
 ENTRYPOINT ["node", "./bin/run.js", "schedule"]
 CMD ["schedule.json"]
 
-ENV HEARTBEAT_PATH=heartbeat.epoch
-ENV LAST_SUCCESS_PATH=last_success.epoch
+ENV HEARTBEAT_PATH=/tmp/heartbeat.epoch
+ENV LAST_SUCCESS_PATH=/tmp/last_success.epoch
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD ["node", "./bin/healthcheck.js"]

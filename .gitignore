@@ -1,8 +1,8 @@
 node_modules/
 dist/
-.env
 output/
-.checkpoint
+data/
+.env
 schedule.json
 heartbeat.epoch
 last_success.epoch

@@ -36,7 +36,7 @@ const configSchema = z.strictObject({
 	metadata: z.boolean().default(false),
 	comicInfo: z.boolean().default(true),
 	ifExists: z.enum(["skip", "overwrite", "error"]).default("overwrite"),
-	checkpoint: z.string().default(".checkpoint").optional(),
+	checkpoint: z.string().default("data/.checkpoint").optional(),
 });
 
 export type Query = z.infer<typeof querySchema>;
