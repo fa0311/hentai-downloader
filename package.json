@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "shx rm -rf dist && tsc -b && oclif readme",
+    "build": "shx rm -rf dist && tsc -b",
+    "build:readme": "oclif readme",
     "start": "node ./bin/run.js",
     "dev": "node ./bin/dev.js",
     "test": "vitest",
