@@ -11,8 +11,6 @@ A powerful CLI tool for downloading galleries with advanced features like schedu
 * [Clone the repository](#clone-the-repository)
 * [Install dependencies](#install-dependencies)
 * [Build the project](#build-the-project)
-* [Build the Docker image](#build-the-docker-image)
-* [Run with docker-compose](#run-with-docker-compose)
 * [Run in development mode](#run-in-development-mode)
 * [Run tests](#run-tests)
 * [Build the project](#build-the-project)
@@ -266,11 +264,7 @@ LAST_SUCCESS_PATH=/path/to/last_success.txt
 ## Docker Support
 
 ```bash
-# Build the Docker image
-docker build -t hentai-downloader .
-
-# Run with docker-compose
-docker-compose up -d
+docker run --rm -v ${PWD}/output:/app/output ghcr.io/fa0311/hentai-downloader download 1571033
 ```
 
 ## Development

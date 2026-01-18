@@ -27,7 +27,7 @@ CMD ["help"]
 
 FROM runtime AS scheduler
 ENTRYPOINT ["node", "./bin/run.js", "schedule"]
-CMD ["input.json"]
+CMD ["schedule.json"]
 
 ENV HEARTBEAT_PATH=heartbeat.epoch
 ENV LAST_SUCCESS_PATH=last_success.epoch
