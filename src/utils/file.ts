@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-type OutputFileDescriptor = {
+export type OutputFileDescriptor = {
 	line: (output: string) => Promise<void>;
 	write: (output: string) => Promise<void>;
 };

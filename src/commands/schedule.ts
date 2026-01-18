@@ -12,7 +12,8 @@ import { parseEnv } from "../utils/env";
 import { getChromeHeader } from "./../utils/header";
 import { initProxy } from "./../utils/proxy";
 import "dotenv/config";
-
+import fs from "node:fs";
+import path from "node:path";
 import pino from "pino";
 import { differenceUint32Collections } from "../utils/bitmap";
 import { loadCheckpoint } from "../utils/checkpoint";
@@ -36,6 +37,13 @@ const parseInputQuery = async (inputQuery: Query) => {
 		case "query":
 			return await getHitomiMangaList({ query: inputQuery.query });
 	}
+};
+
+const outputTimestamp = (filename: string, errorHandler: (error: unknown) => void) => {
+	(async () => {
+		await fs.promises.mkdir(path.dirname(filename), { recursive: true });
+		await fs.promises.writeFile(filename, `${Math.floor(Date.now() / 1000)}\n`, "utf8");
+	})().catch(errorHandler);
 };
 
 export class Schedule extends Command {
@@ -79,41 +87,48 @@ export class Schedule extends Command {
 			}
 			logger.debug(`Downloading galleries: ${JSON.stringify(galleryIds)}`);
 			await outputFile(async (checkpointDiscriptor) => {
-				const checkpoint = await checkpointDiscriptor.create(config.checkpoint, "a");
+				const checkpoint = config.checkpoint ? await checkpointDiscriptor.create(config.checkpoint, "a") : null;
 
 				for (const galleryId of galleryIds) {
-					const [galleries, allTasks] = await downloadHitomiGalleries({ galleryId, additionalHeaders });
-					const tasks = config.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
-					const pathname = fillGalleryPlaceholders(config.output, galleries);
-					const fd = isZipFile(pathname) ? await outputZip(pathname) : await outputDir(pathname);
-					const fdFactory = exhaustiveMatchAsync({
-						error: async () => {
-							throw new HentaiAlreadyExistsError(`File or directory already exists: ${pathname}`);
-						},
-						skip: async () => {
-							logger.warn(`Skipping existing file or directory: ${pathname}`);
-							return null;
-						},
-						overwrite: async () => {
-							logger.warn(`Overwriting existing file or directory: ${pathname}`);
-							await fd.remove();
-							return fd;
-						},
-					});
-					const outputDescriptor = fd.exists ? await fdFactory(config.ifExists) : fd;
-					await outputDescriptor?.create(async (fd) => {
-						if (config.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
-						if (config.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
-						const promises = tasks.map(async (task, i, all) => {
-							const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file);
-							const response = await safeRequest(() => task.callback());
-							const readStream = Readable.fromWeb(response.body!);
-							fd.writeStream(filename, readStream);
+					try {
+						const [galleries, allTasks] = await downloadHitomiGalleries({ galleryId, additionalHeaders });
+						const tasks = config.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
+						const pathname = fillGalleryPlaceholders(config.output, galleries);
+						const fd = isZipFile(pathname) ? await outputZip(pathname) : await outputDir(pathname);
+						const fdFactory = exhaustiveMatchAsync({
+							error: async () => {
+								throw new HentaiAlreadyExistsError(`File or directory already exists: ${pathname}`);
+							},
+							skip: async () => {
+								logger.warn(`Skipping existing file or directory: ${pathname}`);
+								return null;
+							},
+							overwrite: async () => {
+								logger.warn(`Overwriting existing file or directory: ${pathname}`);
+								await fd.remove();
+								return fd;
+							},
 						});
-						await Promise.all(promises);
-					});
-					await checkpoint?.line(String(galleryId));
-					logger.debug(`Finished downloading gallery ${galleryId} to ${pathname}`);
+						const outputDescriptor = fd.exists ? await fdFactory(config.ifExists) : fd;
+						await outputDescriptor?.create(async (fd) => {
+							if (config.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
+							if (config.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
+							const promises = tasks.map(async (task, i, all) => {
+								const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file);
+								const response = await safeRequest(() => task.callback());
+								const readStream = Readable.fromWeb(response.body!);
+								fd.writeStream(filename, readStream);
+							});
+							await Promise.all(promises);
+						});
+						if (env.LAST_SUCCESS_PATH) {
+							outputTimestamp(env.LAST_SUCCESS_PATH, logger.error);
+						}
+						await checkpoint?.line(String(galleryId));
+						logger.debug(`Finished downloading gallery ${galleryId} to ${pathname}`);
+					} catch (error) {
+						logger.error(error);
+					}
 				}
 			});
 			const end = performance.now();
@@ -122,6 +137,15 @@ export class Schedule extends Command {
 			const minutes = Math.floor((duration / (1000 * 60)) % 60);
 			return logger.info(`Scheduled download task completed in ${minutes}m ${seconds}s`);
 		};
+
+		if (env.LAST_SUCCESS_PATH) {
+			outputTimestamp(env.LAST_SUCCESS_PATH, logger.error);
+		}
+
+		if (env.HEARTBEAT_PATH) {
+			outputTimestamp(env.HEARTBEAT_PATH!, logger.error);
+			setInterval(() => outputTimestamp(env.HEARTBEAT_PATH!, logger.error), 60000);
+		}
 
 		if (flags.runOnce) {
 			await onTick();

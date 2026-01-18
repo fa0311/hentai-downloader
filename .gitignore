@@ -4,3 +4,5 @@ dist/
 output/
 .checkpoint
 schedule.json
+heartbeat.epoch
+last_success.epoch
