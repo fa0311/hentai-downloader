@@ -1,44 +1,35 @@
-# syntax=docker/dockerfile:1
-
-FROM node:20-slim AS base
-
-ENV NODE_ENV=production
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-RUN corepack enable
-
+FROM node:24 AS builder
 WORKDIR /app
+RUN npm install -g pnpm@10.15.0
 
-
-FROM base AS deps
+RUN apt-get update
+RUN apt-get install -y python3 make g++
+RUN rm -rf /var/lib/apt/lists/*
 
 COPY package.json pnpm-lock.yaml ./
-
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile
-
-FROM base AS build
-
-COPY --from=deps /app/node_modules /app/node_modules
-
+RUN pnpm install --frozen-lockfile
 COPY . .
-
 RUN pnpm build
-
+RUN pnpm rebuild roaring
 RUN pnpm prune --prod
 
-FROM base AS runtime
+FROM node:24 AS runtime
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+COPY bin ./bin
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
 
-RUN mkdir -p /output /download
 
-COPY --from=build /app /app
+FROM runtime AS cli
+ENTRYPOINT ["node", "./bin/run.js"]
+CMD ["help"]
 
-USER node
+FROM runtime AS scheduler
+ENTRYPOINT ["node", "./bin/run.js", "schedule"]
+CMD ["input.json"]
 
+ENV HEARTBEAT_PATH=heartbeat.epoch
+ENV LAST_SUCCESS_PATH=last_success.epoch
 
-CMD ["pnpm", "start"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD ["node", "./bin/healthcheck.js"]
