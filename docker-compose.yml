@@ -3,6 +3,9 @@ services:
     image: ghcr.io/fa0311/hentai-downloader:latest-scheduler
     container_name: hentai-downloader
     volumes:
-      - ./input.json:/app/input.json
+      - ./schedule.json:/app/schedule.json
       - ./output:/app/output
-      - ./.checkpoint:/app/.checkpoint
+      - hentai-data:/app/data
+
+volumes:
+  hentai-data:
