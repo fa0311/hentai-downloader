@@ -1,10 +1,10 @@
 import path from "node:path";
 import { Semaphore } from "async-mutex";
-import { HentaiHttpError } from "./hitomi/error";
 import type { DownloadFileInfo, GalleryInfo } from "./hitomi/gallery";
 import { downloadHitomiNozomiList, extractNozomiGalleryIds, type SearchQuery } from "./hitomi/list";
 import { exponentialBackoff } from "./utils/backoff";
 import { intersectUint32Collections } from "./utils/bitmap";
+import { HentaiHttpError } from "./utils/error";
 
 export const createSafeRequest = async () => {
 	const semaphore = new Semaphore(5);
@@ -54,15 +54,17 @@ export const fillGalleryPlaceholders = (template: string, gallery: GalleryInfo) 
 		.replace("{language}", String(gallery.language))
 		.replace("{year}", String(date.getFullYear()).padStart(4, "0"))
 		.replace("{month}", String(date.getMonth() + 1).padStart(2, "0"))
-		.replace("{day}", String(date.getDate()).padStart(2, "0"));
+		.replace("{day}", String(date.getDate()).padStart(2, "0"))
+		.replace("{now_year}", String(new Date().getFullYear()).padStart(4, "0"))
+		.replace("{now_month}", String(new Date().getMonth() + 1).padStart(2, "0"))
+		.replace("{now_day}", String(new Date().getDate()).padStart(2, "0"))
+		.replace("{now_hour}", String(new Date().getHours()).padStart(2, "0"))
+		.replace("{now_minute}", String(new Date().getMinutes()).padStart(2, "0"))
+		.replace("{now_second}", String(new Date().getSeconds()).padStart(2, "0"))
+		.replace("{random}", String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, "0"));
 };
 
-export const fillFilenamePlaceholders = (
-	template: string,
-	index: number,
-	all: number,
-	filename: DownloadFileInfo["file"],
-) => {
+export const fillFilenamePlaceholders = (template: string, index: number, all: number, filename: DownloadFileInfo["file"]) => {
 	const ext = path.extname(filename.name);
 	const base = path.basename(filename.name, ext);
 	const no = String(index + 1).padStart(String(all).length, "0");

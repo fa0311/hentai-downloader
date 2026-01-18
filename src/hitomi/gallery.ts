@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HentaiHttpError, HentaiParseError } from "./error";
+import { HentaiHttpError, HentaiParseError, HentaiZodParseError } from "./../utils/error";
 
 const contentsDomain = "gold-usergeneratedcontent.net";
 
@@ -152,16 +152,11 @@ const getGalleries = async ({ galleryId, headers }: GetGalleriesParam): Promise<
 		.trim()
 		.replace(/;$/, "");
 	const prepared = z.preprocess((x) => removeNulls(x), GalleryInfoSchema);
-	const galleries = await prepared.safeParseAsync(JSON.parse(jsonText));
-	if (galleries.success) {
-		return galleries.data;
+	const parsed = await prepared.safeParseAsync(JSON.parse(jsonText));
+	if (parsed.success) {
+		return parsed.data;
 	} else {
-		const text = JSON.stringify(
-			galleries.error.format((issue) => issue.message),
-			null,
-			2,
-		);
-		throw new HentaiParseError(`Failed to parse galleries JSON: ${text}`);
+		throw new HentaiZodParseError("Failed to parse galleries JSON", parsed.error);
 	}
 };
 

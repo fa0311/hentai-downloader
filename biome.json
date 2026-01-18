@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
   "formatter": {
-    "lineWidth": 120
+    "lineWidth": 140
   },
   "linter": {
     "enabled": true,
