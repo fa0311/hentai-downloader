@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HentaiHttpError, HentaiParseError, HentaiZodParseError } from "./../utils/error";
+import { HentaiHttpError, HentaiParseError, HentaiZodParseError } from "./../utils/error.js";
 
 const contentsDomain = "gold-usergeneratedcontent.net";
 
@@ -104,12 +104,8 @@ export const GalleryInfoSchema = z.strictObject({
 			z.strictObject({
 				url: z.string(),
 				tag: z.string(),
-				male: z
-					.union([z.literal("1"), z.literal(""), z.literal(1), z.undefined()])
-					.transform((x) => Boolean(Number(x))),
-				female: z
-					.union([z.literal("1"), z.literal(""), z.literal(1), z.undefined()])
-					.transform((x) => Boolean(Number(x))),
+				male: z.union([z.literal("1"), z.literal(""), z.literal(1), z.undefined()]).transform((x) => Boolean(Number(x))),
+				female: z.union([z.literal("1"), z.literal(""), z.literal(1), z.undefined()]).transform((x) => Boolean(Number(x))),
 			}),
 		)
 		.optional(),

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import { parse } from "jsonc-parser";
 import z from "zod";
-import { HentaiZodParseError } from "../utils/error";
+import { HentaiZodParseError } from "../utils/error.js";
 
 const querySchema = z.discriminatedUnion("type", [
 	z.strictObject({

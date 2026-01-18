@@ -2,25 +2,25 @@ import { Args, Command, Flags } from "@oclif/core";
 import "dotenv/config";
 import { Readable } from "node:stream";
 import { CronJob } from "cron";
-import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download";
-import { downloadHitomiGalleries } from "./../hitomi/gallery";
-import { parseHitomiUrl } from "./../hitomi/url";
-import { galleryInfoToComicInfo } from "./../utils/comicInfo";
-import { parseConfig } from "../utils/config";
-import { outputDir, outputZip } from "./../utils/dir";
-import { parseEnv } from "../utils/env";
-import { getChromeHeader } from "./../utils/header";
-import { initProxy } from "./../utils/proxy";
+import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
+import { downloadHitomiGalleries } from "./../hitomi/gallery.js";
+import { parseHitomiUrl } from "./../hitomi/url.js";
+import { galleryInfoToComicInfo } from "./../utils/comicInfo.js";
+import { parseConfig } from "../utils/config.js";
+import { outputDir, outputZip } from "./../utils/dir.js";
+import { parseEnv } from "../utils/env.js";
+import { getChromeHeader } from "./../utils/header.js";
+import { initProxy } from "./../utils/proxy.js";
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import pino from "pino";
-import { differenceUint32Collections } from "../utils/bitmap";
-import { loadCheckpoint } from "../utils/checkpoint";
-import type { Query } from "../utils/config";
-import { HentaiAlreadyExistsError } from "../utils/error";
-import { outputFile } from "../utils/file";
-import { exhaustiveMatchAsync } from "../utils/match";
+import { differenceUint32Collections } from "../utils/bitmap.js";
+import { loadCheckpoint } from "../utils/checkpoint.js";
+import type { Query } from "../utils/config.js";
+import { HentaiAlreadyExistsError } from "../utils/error.js";
+import { outputFile } from "../utils/file.js";
+import { exhaustiveMatchAsync } from "../utils/match.js";
 
 const parseInputQuery = async (inputQuery: Query) => {
 	switch (inputQuery.type) {
@@ -46,8 +46,24 @@ const outputTimestamp = (filename: string, errorHandler: (error: unknown) => voi
 	})().catch(errorHandler);
 };
 
-export class Schedule extends Command {
-	static description = "Hentai Downloader Schedule";
+export default class Schedule extends Command {
+	static description = "Run scheduled downloads based on configuration file";
+
+	static examples = [
+		{
+			description: "Run scheduled downloads with default config",
+			command: "<%= config.bin %> schedule",
+		},
+		{
+			description: "Run scheduled downloads with custom config",
+			command: "<%= config.bin %> schedule schedule.json",
+		},
+		{
+			description: "Run once without scheduling (useful for testing)",
+			command: "<%= config.bin %> schedule --runOnce",
+		},
+	];
+
 	static args = {
 		config: Args.file({
 			description: "Path to the schedule configuration file",

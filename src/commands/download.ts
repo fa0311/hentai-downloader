@@ -1,21 +1,21 @@
 import { Args, Command, Flags } from "@oclif/core";
 import "dotenv/config";
 import { Readable } from "node:stream";
-import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download";
-import { downloadHitomiGalleries } from "./../hitomi/gallery";
-import { parseHitomiUrl } from "./../hitomi/url";
-import { differenceUint32Collections } from "../utils/bitmap";
-import { catchError } from "../utils/catch";
-import { loadCheckpoint } from "../utils/checkpoint";
-import { galleryInfoToComicInfo } from "./../utils/comicInfo";
-import { outputDir, outputZip } from "./../utils/dir";
-import { HentaiAlreadyExistsError } from "../utils/error";
-import { outputFile } from "../utils/file";
-import { getChromeHeader } from "./../utils/header";
-import { info, title, warning } from "../utils/log";
-import { exhaustiveMatchAsync } from "../utils/match";
-import { progress } from "./../utils/progress";
-import { initProxy } from "./../utils/proxy";
+import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
+import { downloadHitomiGalleries } from "./../hitomi/gallery.js";
+import { parseHitomiUrl } from "./../hitomi/url.js";
+import { differenceUint32Collections } from "../utils/bitmap.js";
+import { catchError } from "../utils/catch.js";
+import { loadCheckpoint } from "../utils/checkpoint.js";
+import { galleryInfoToComicInfo } from "./../utils/comicInfo.js";
+import { outputDir, outputZip } from "./../utils/dir.js";
+import { HentaiAlreadyExistsError } from "../utils/error.js";
+import { outputFile } from "../utils/file.js";
+import { getChromeHeader } from "./../utils/header.js";
+import { info, title, warning } from "../utils/log.js";
+import { exhaustiveMatchAsync } from "../utils/match.js";
+import { progress } from "./../utils/progress.js";
+import { initProxy } from "./../utils/proxy.js";
 
 const parseInput = async (input: string, additionalHeaders?: Record<string, string>) => {
 	const isGalleryId = /^[0-9]+$/.test(input);
@@ -31,8 +31,36 @@ const parseInput = async (input: string, additionalHeaders?: Record<string, stri
 	}
 };
 
-export class Download extends Command {
-	static description = "Hentai Downloader CLI";
+export default class Download extends Command {
+	static description = "Download galleries by ID or URL";
+
+	static examples = [
+		{
+			description: "Download a gallery by ID",
+			command: "<%= config.bin %> download 1571033",
+		},
+		{
+			description: "Download with custom output directory",
+			command: "<%= config.bin %> download 1571033 output/{id}",
+		},
+		{
+			description: "Download as ZIP file",
+			command: "<%= config.bin %> download 1571033 output/{id}.zip",
+		},
+		{
+			description: "Download with custom filename pattern",
+			command: '<%= config.bin %> download 1571033 output/{id} "{no}-{name}{ext}"',
+		},
+		{
+			description: "Skip existing files instead of erroring",
+			command: "<%= config.bin %> download 1571033 --ifExists=skip",
+		},
+		{
+			description: "Resume from checkpoint",
+			command: "<%= config.bin %> download https://hitomi.la/artist/kinnotama-japanese.html --checkpoint=.checkpoint --ifExists=overwrite",
+		},
+	];
+
 	static args = {
 		input: Args.string({
 			required: true,

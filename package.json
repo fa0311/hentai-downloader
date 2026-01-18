@@ -1,11 +1,11 @@
 {
   "name": "hentai-downloader",
   "version": "1.0.0",
-  "description": "downloader",
+  "description": "A powerful CLI tool for downloading galleries with advanced features like scheduling, checkpointing, and batch processing",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "shx rm -rf dist && tsc -b",
+    "build": "shx rm -rf dist && tsc -b && oclif readme",
     "start": "node ./bin/run.js",
     "dev": "node ./bin/dev.js",
     "test": "vitest",
@@ -20,25 +20,34 @@
     "dirname": "hentai-downloader",
     "commands": "./dist/commands",
     "plugins": [
-      "@oclif/plugin-help",
-      "@oclif/plugin-plugins"
+      "@oclif/plugin-help"
     ],
     "topicSeparator": " ",
-    "topics": {
-      "hello": {
-        "description": "Say hello to the world and others"
-      }
-    }
+    "topics": {},
+    "repositoryPrefix": "<%- repo %>/blob/main/<%- commandPath %>",
+    "additionalHelpFlags": [
+      "-h"
+    ],
+    "additionalVersionFlags": [
+      "-v"
+    ]
   },
   "bin": {
     "hentai-downloader": "./bin/run.js"
   },
   "author": "fa0311",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fa0311/hentai-downloader.git"
+  },
+  "homepage": "https://github.com/fa0311/hentai-downloader",
+  "bugs": {
+    "url": "https://github.com/fa0311/hentai-downloader/issues"
+  },
   "dependencies": {
     "@oclif/core": "^4.8.0",
     "@oclif/plugin-help": "^6.2.36",
-    "@oclif/plugin-plugins": "^5.4.54",
     "async-mutex": "^0.5.0",
     "boxen": "^8.0.1",
     "chalk": "^5.6.2",

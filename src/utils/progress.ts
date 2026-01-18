@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import cliProgress from "cli-progress";
-import { fitSymbol, fitText } from "./log";
+import { fitSymbol, fitText } from "./log.js";
 
 type ProgressCallback = {
 	total: number;

@@ -1,5 +1,5 @@
 import { create } from "xmlbuilder2";
-import type { GalleryInfo } from "../hitomi/gallery";
+import type { GalleryInfo } from "../hitomi/gallery.js";
 
 type AgeRatingType =
 	| "Not Applicable"

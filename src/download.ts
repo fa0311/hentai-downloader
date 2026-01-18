@@ -1,10 +1,10 @@
 import path from "node:path";
 import { Semaphore } from "async-mutex";
-import type { DownloadFileInfo, GalleryInfo } from "./hitomi/gallery";
-import { downloadHitomiNozomiList, extractNozomiGalleryIds, type SearchQuery } from "./hitomi/list";
-import { exponentialBackoff } from "./utils/backoff";
-import { intersectUint32Collections } from "./utils/bitmap";
-import { HentaiHttpError } from "./utils/error";
+import type { DownloadFileInfo, GalleryInfo } from "./hitomi/gallery.js";
+import { downloadHitomiNozomiList, extractNozomiGalleryIds, type SearchQuery } from "./hitomi/list.js";
+import { exponentialBackoff } from "./utils/backoff.js";
+import { intersectUint32Collections } from "./utils/bitmap.js";
+import { HentaiHttpError } from "./utils/error.js";
 
 export const createSafeRequest = async () => {
 	const semaphore = new Semaphore(5);

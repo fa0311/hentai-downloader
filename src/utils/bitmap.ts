@@ -1,4 +1,4 @@
-import RoaringBitmap32 from "roaring/RoaringBitmap32";
+import RoaringBitmap32 from "roaring/RoaringBitmap32.js";
 
 export const intersectUint32Collections = (collections: number[][]): number[] => {
 	if (collections.length === 0) return [];

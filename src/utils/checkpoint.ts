@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { pathExists } from "./dir";
+import { pathExists } from "./dir.js";
 
 export const loadCheckpoint = async (filePath: string | undefined): Promise<number[]> => {
 	if (filePath) {

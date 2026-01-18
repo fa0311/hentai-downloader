@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { SearchQuery } from "./list";
+import type { SearchQuery } from "./list.js";
 
 const urlSchema = z.url();
 
