@@ -92,7 +92,7 @@ EXAMPLES
 
   Resume from checkpoint
 
-    $ hentai-downloader download https://hitomi.la/artist/kinnotama-japanese.html --checkpoint=.checkpoint ^
+    $ hentai-downloader download https://hitomi.la/artist/kinnotama-japanese.html --checkpoint=.checkpoint `
       --ifExists=overwrite
 ```
 

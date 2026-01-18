@@ -18,7 +18,7 @@ export const fitSymbol = (icon: string) => {
 
 export const title = (message: string) => {
 	const title = chalk.bold(`     🚀 ${message}     `);
-	return `${boxen(`${title}`, { padding: 1, borderStyle: "double" })}`;
+	return `${boxen(`${title}`, { padding: 1, margin: 1, borderStyle: "double" })}`;
 };
 
 export const success = (message: string) => {
