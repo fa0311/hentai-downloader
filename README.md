@@ -25,22 +25,6 @@ hentai-downloader schedule schedule.json
 
 For detailed command options, see [COMMANDS.md](COMMANDS.md).
 
-## 📦 Installation
-
-### npm/pnpm
-
-```bash
-npm install -g hentai-downloader
-# or
-pnpm add -g hentai-downloader
-```
-
-### Docker
-
-```bash
-docker pull ghcr.io/fa0311/hentai-downloader:latest-scheduler
-```
-
 ### Build from Source
 
 ```bash
@@ -52,7 +36,16 @@ pnpm build
 
 ## 🐳 Docker Usage
 
-### Using docker-compose
+### CLI Usage
+
+```bash
+docker pull ghcr.io/fa0311/hentai-downloader:latest-cli
+docker run --rm -v ${PWD}/output:/app/output ghcr.io/fa0311/hentai-downloader:latest-cli download 1571033
+```
+
+### Scheduler Usage
+
+Use docker-compose for scheduled downloads:
 
 1. Create `schedule.json` (see configuration example below)
 
