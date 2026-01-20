@@ -121,8 +121,8 @@ export const GalleryInfoSchema = z.strictObject({
 
 export type GalleryInfo = z.infer<typeof GalleryInfoSchema>;
 
-const removeNulls = (v: any) => {
-	const entries = Object.entries(v).map(([k, val]) => [k, val === null ? undefined : val]);
+const removeNulls = (obj: Record<string, unknown>) => {
+	const entries = Object.entries(obj).map(([k, val]) => [k, val === null ? undefined : val]);
 	return Object.fromEntries(entries);
 };
 
@@ -142,17 +142,21 @@ const getGalleries = async ({ galleryId, headers }: GetGalleriesParam): Promise<
 		throw new HentaiHttpError(`Failed to fetch galleries: ${galleriesUrl} - ${response.status} ${response.statusText}`);
 	}
 	const galleriesJsText = await response.text();
-
 	const jsonText = galleriesJsText
 		.replace(/^var galleryinfo = /, "")
 		.trim()
 		.replace(/;$/, "");
-	const prepared = z.preprocess((x) => removeNulls(x), GalleryInfoSchema);
-	const parsed = await prepared.safeParseAsync(JSON.parse(jsonText));
-	if (parsed.success) {
-		return parsed.data;
+	const obj = await z.looseObject({}).safeParseAsync(JSON.parse(jsonText));
+	if (obj.success) {
+		const prepared = removeNulls(obj.data);
+		const parsed = await GalleryInfoSchema.safeParseAsync(prepared);
+		if (parsed.success) {
+			return parsed.data;
+		} else {
+			throw new HentaiZodParseError("Failed to parse galleries JSON", parsed.error);
+		}
 	} else {
-		throw new HentaiZodParseError("Failed to parse galleries JSON", parsed.error);
+		throw new HentaiZodParseError("Failed to parse galleries JSON", obj.error);
 	}
 };
 

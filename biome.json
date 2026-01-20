@@ -7,29 +7,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "style": {
-        "noNonNullAssertion": "off"
-      },
-      "suspicious": {
-        "noExplicitAny": "off"
-      },
       "nursery": {
         "noFloatingPromises": "error"
       }
     }
-  },
-  "overrides": [
-    {
-      "includes": ["injects/**/*.js"],
-      "linter": {
-        "enabled": true,
-        "rules": {
-          "recommended": true,
-          "nursery": {
-            "noFloatingPromises": "off"
-          }
-        }
-      }
-    }
-  ]
+  }
 }

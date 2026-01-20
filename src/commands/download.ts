@@ -134,7 +134,7 @@ export default class Download extends Command {
 							},
 							skip: async () => {
 								multiBar.log(warning(`Skipping existing file or directory: ${pathname}`));
-								return null;
+								return undefined;
 							},
 							overwrite: async () => {
 								multiBar.log(warning(`Overwriting existing file or directory: ${pathname}`));
@@ -151,7 +151,7 @@ export default class Download extends Command {
 								const promises = tasks.map(async (task, i, all) => {
 									const filename = fillFilenamePlaceholders(args.filename, i, all.length, task.file);
 									const response = await safeRequest(() => task.callback());
-									const readStream = Readable.fromWeb(response.body!);
+									const readStream = Readable.fromWeb(response.body);
 									fd.writeStream(filename, readStream);
 									b2.increment();
 								});

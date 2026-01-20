@@ -107,6 +107,7 @@ export default class Schedule extends Command {
 
 				for (const galleryId of galleryIds) {
 					try {
+						logger.info(`Downloading galleries: ${galleryId}`);
 						const [galleries, allTasks] = await downloadHitomiGalleries({ galleryId, additionalHeaders });
 						const tasks = config.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
 						const pathname = fillGalleryPlaceholders(config.output, galleries);
@@ -117,7 +118,7 @@ export default class Schedule extends Command {
 							},
 							skip: async () => {
 								logger.warn(`Skipping existing file or directory: ${pathname}`);
-								return null;
+								return undefined;
 							},
 							overwrite: async () => {
 								logger.warn(`Overwriting existing file or directory: ${pathname}`);
@@ -132,7 +133,7 @@ export default class Schedule extends Command {
 							const promises = tasks.map(async (task, i, all) => {
 								const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file);
 								const response = await safeRequest(() => task.callback());
-								const readStream = Readable.fromWeb(response.body!);
+								const readStream = Readable.fromWeb(response.body);
 								fd.writeStream(filename, readStream);
 							});
 							await Promise.all(promises);
@@ -159,8 +160,9 @@ export default class Schedule extends Command {
 		}
 
 		if (env.HEARTBEAT_PATH) {
-			outputTimestamp(env.HEARTBEAT_PATH!, logger.error);
-			setInterval(() => outputTimestamp(env.HEARTBEAT_PATH!, logger.error), 60000);
+			const pathname = env.HEARTBEAT_PATH;
+			outputTimestamp(pathname, logger.error);
+			setInterval(() => outputTimestamp(pathname, logger.error), 60000);
 		}
 
 		if (flags.runOnce) {
@@ -172,7 +174,7 @@ export default class Schedule extends Command {
 				start: true,
 				timeZone: env.TZ,
 				runOnInit: config.runOnInit,
-				errorHandler: (error: any) => {
+				errorHandler: (error: unknown) => {
 					logger.error(error);
 				},
 				waitForCompletion: true,

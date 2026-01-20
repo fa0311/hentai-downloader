@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseHitomiUrl } from "../../src/hitomi/url";
+import { parseHitomiUrl } from "../../../src/hitomi/url";
 
 describe("parseHitomiUrl", () => {
 	describe("gallery URLs", () => {

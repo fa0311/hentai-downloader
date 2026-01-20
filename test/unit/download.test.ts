@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fillFilenamePlaceholders, fillGalleryPlaceholders, isZipFile } from "../src/download";
-import type { GalleryInfo } from "../src/hitomi/gallery";
+import { fillFilenamePlaceholders, fillGalleryPlaceholders, isZipFile } from "../../src/download";
+import type { GalleryInfo } from "../../src/hitomi/gallery";
 
 describe("fillGalleryPlaceholders", () => {
 	const mockGallery: GalleryInfo = {

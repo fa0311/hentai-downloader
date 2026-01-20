@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractNozomiGalleryIds, getNozomiUrls } from "../../src/hitomi/list";
+import { extractNozomiGalleryIds, getNozomiUrls } from "../../../src/hitomi/list";
 
 describe("getNozomiUrls", () => {
 	it("generates URL for single artist", () => {

@@ -1,11 +1,14 @@
 {
   "compilerOptions": {
+    "strict": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "lib": ["ES2023"],
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "sourceMap": true,
+    "inlineSources": true
   },
   "include": ["src/**/*"]
 }

@@ -6,6 +6,8 @@ import { exponentialBackoff } from "./utils/backoff.js";
 import { intersectUint32Collections } from "./utils/bitmap.js";
 import { HentaiHttpError } from "./utils/error.js";
 
+type NonNullBodyResponse = Response & { body: NonNullable<Response["body"]> };
+
 export const createSafeRequest = async () => {
 	const semaphore = new Semaphore(5);
 	const backoff = exponentialBackoff({ baseDelayMs: 500, maxRetries: 10 });
@@ -23,7 +25,10 @@ export const createSafeRequest = async () => {
 				if (!response.ok) {
 					throw new HentaiHttpError(`HTTP error: ${response.status} ${response.statusText}`);
 				}
-				return { type: "success", value: response };
+				if (response.body) {
+					return { type: "success", value: response as NonNullBodyResponse };
+				}
+				throw new HentaiHttpError(`Response has no body`);
 			});
 		});
 	};
