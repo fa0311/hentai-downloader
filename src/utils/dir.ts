@@ -35,16 +35,19 @@ export const outputDir = async (basePath: string): Promise<OutputDescriptor> => 
 		create: async (callback: OutputCallback) => {
 			await fs.promises.mkdir(basePath, { recursive: true });
 			const promises: Promise<void>[] = [];
-			await callback({
-				writeFile: (filename: string, output: string) => {
-					promises.push(fs.promises.writeFile(path.join(basePath, filename), output));
-				},
-				writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
-					const writeStream = fs.createWriteStream(path.join(basePath, filename));
-					promises.push(stream.promises.pipeline(readStream, writeStream));
-				},
-			});
-			await Promise.all(promises);
+			try {
+				await callback({
+					writeFile: (filename: string, output: string) => {
+						promises.push(fs.promises.writeFile(path.join(basePath, filename), output));
+					},
+					writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
+						const writeStream = fs.createWriteStream(path.join(basePath, filename));
+						promises.push(stream.promises.pipeline(readStream, writeStream));
+					},
+				});
+			} finally {
+				await Promise.all(promises);
+			}
 		},
 	};
 };
@@ -77,8 +80,8 @@ export const outputZip = async (filePath: string): Promise<OutputDescriptor> => 
 				});
 			} finally {
 				zip.end();
+				await pipeline;
 			}
-			await pipeline;
 		},
 	};
 };
