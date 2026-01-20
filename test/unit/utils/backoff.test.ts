@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { counter } from "../../src/utils/backoff";
+import { counter } from "../../../src/utils/backoff.js";
 
 describe("counter", () => {
 	it("starts with default value 0", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { differenceUint32Collections, intersectUint32Collections } from "../../src/utils/bitmap";
+import { differenceUint32Collections, intersectUint32Collections } from "../../../src/utils/bitmap.js";
 
 describe("intersectUint32Collections", () => {
 	it("returns empty array for empty input", () => {

@@ -79,7 +79,7 @@ export const GalleryInfoSchema = z.strictObject({
 	title: z.string(),
 	language: z.string().optional(),
 	galleryurl: z.string(),
-	datepublished: z.string().optional(),
+	datepublished: z.undefined().or(z.string().transform((val) => new Date(val))),
 	videofilename: z.string().optional(),
 	video: z.string().optional(),
 	date: z.string().transform((val) => new Date(val)),

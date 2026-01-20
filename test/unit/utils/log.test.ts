@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fitSymbol, fitText } from "../../src/utils/log";
+import { fitSymbol, fitText } from "../../../src/utils/log.js";
 
 describe("fitText", () => {
 	it("short text with padding", () => {

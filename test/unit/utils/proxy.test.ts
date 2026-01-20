@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseProxyUrl } from "../../src/utils/proxy";
+import { parseProxyUrl } from "../../../src/utils/proxy.js";
 
 describe("parseProxyUrl", () => {
 	it("parses socks5 proxy", () => {

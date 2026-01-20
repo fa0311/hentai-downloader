@@ -51,7 +51,7 @@ export const getHitomiMangaList = async ({ query, additionalHeaders }: GetHitomi
 };
 
 export const fillGalleryPlaceholders = (template: string, gallery: GalleryInfo) => {
-	const date = new Date(gallery.date ?? gallery.datepublished);
+	const date = gallery.date ?? gallery.datepublished;
 	return template
 		.replaceAll("{id}", String(gallery.id))
 		.replaceAll("{title}", gallery.title)
