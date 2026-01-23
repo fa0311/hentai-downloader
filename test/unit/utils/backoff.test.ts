@@ -1,47 +1,171 @@
-import { describe, expect, it } from "vitest";
-import { counter } from "../../../src/utils/backoff.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { exponentialBackoff } from "../../../src/utils/backoff.js";
+import { counter } from "../../../src/utils/counter.js";
 
-describe("counter", () => {
-	it("starts with default value 0", () => {
-		const c = counter();
-		expect(c.value()).toBe(0);
+vi.mock("../../../src/utils/sleep.js", () => ({
+	sleep: vi.fn().mockResolvedValue(undefined),
+}));
+
+describe("exponentialBackoff", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
 	});
 
-	it("starts with custom initial value", () => {
-		const c = counter(10);
-		expect(c.value()).toBe(10);
+	it("returns value immediately on first success", async () => {
+		const callback = vi.fn().mockResolvedValue({ type: "success", value: "result" });
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 3 });
+
+		const result = await backoff(callback);
+
+		expect(result).toBe("result");
+		expect(callback).toHaveBeenCalledTimes(1);
 	});
 
-	it("increments by 1 each time", () => {
-		const c = counter();
-		c.increment();
-		expect(c.value()).toBe(1);
-		c.increment();
-		expect(c.value()).toBe(2);
-		c.increment();
-		expect(c.value()).toBe(3);
+	it("retries on error and eventually succeeds", async () => {
+		const { sleep } = await import("../../../src/utils/sleep.js");
+		const callback = vi
+			.fn()
+			.mockResolvedValueOnce({ type: "error", error: new Error("fail 1") })
+			.mockResolvedValueOnce({ type: "error", error: new Error("fail 2") })
+			.mockResolvedValueOnce({ type: "success", value: "success" });
+
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 5 });
+
+		const result = await backoff(callback);
+
+		expect(result).toBe("success");
+		expect(callback).toHaveBeenCalledTimes(3);
+		expect(sleep).toHaveBeenCalledTimes(2);
+		expect(sleep).toHaveBeenNthCalledWith(1, 100, undefined);
+		expect(sleep).toHaveBeenNthCalledWith(2, 200, undefined);
 	});
 
-	it("increments from custom initial value", () => {
-		const c = counter(5);
-		c.increment();
-		c.increment();
-		expect(c.value()).toBe(7);
+	it("throws AggregateError when maxRetries is reached", async () => {
+		const callback = vi.fn().mockResolvedValue({ type: "error", error: new Error("always fail") });
+
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 3 });
+
+		await expect(backoff(callback)).rejects.toThrow(AggregateError);
+		await expect(backoff(callback)).rejects.toThrow("Maximum retry attempts exceeded");
+
+		expect(callback).toHaveBeenCalledTimes(6);
 	});
 
-	it("maintains independent state for multiple counters", () => {
-		const c1 = counter();
-		const c2 = counter();
-		c1.increment();
-		c1.increment();
-		c2.increment();
-		expect(c1.value()).toBe(2);
-		expect(c2.value()).toBe(1);
+	it("handles maxRetries=0 (fails immediately)", async () => {
+		const callback = vi.fn().mockResolvedValue({ type: "error", error: new Error("fail") });
+
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 0 });
+
+		await expect(backoff(callback)).rejects.toThrow(AggregateError);
+		expect(callback).toHaveBeenCalledTimes(1);
 	});
 
-	it("handles negative initial value", () => {
-		const c = counter(-5);
-		c.increment();
-		expect(c.value()).toBe(-4);
+	it("throws on abort signal", async () => {
+		const controller = new AbortController();
+		controller.abort();
+
+		const callback = vi.fn();
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 3, signal: controller.signal });
+
+		await expect(backoff(callback)).rejects.toThrow("Aborted");
+		expect(callback).not.toHaveBeenCalled();
+	});
+
+	it("passes signal to sleep", async () => {
+		const { sleep } = await import("../../../src/utils/sleep.js");
+		const controller = new AbortController();
+		const callback = vi.fn().mockResolvedValue({ type: "error", error: new Error("fail") });
+
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 3, signal: controller.signal });
+
+		const promise = backoff(callback);
+		await expect(promise).rejects.toThrow(AggregateError);
+
+		expect(sleep).toHaveBeenCalledWith(expect.any(Number), controller.signal);
+	});
+
+	it("calculates exponential backoff correctly", async () => {
+		const { sleep } = await import("../../../src/utils/sleep.js");
+		const callback = vi
+			.fn()
+			.mockResolvedValueOnce({ type: "error", error: new Error("1") })
+			.mockResolvedValueOnce({ type: "error", error: new Error("2") })
+			.mockResolvedValueOnce({ type: "error", error: new Error("3") })
+			.mockResolvedValueOnce({ type: "success", value: "ok" });
+
+		const backoff = exponentialBackoff({ baseDelayMs: 10, maxRetries: 5 });
+
+		await backoff(callback);
+
+		expect(sleep).toHaveBeenNthCalledWith(1, 10, undefined);
+		expect(sleep).toHaveBeenNthCalledWith(2, 20, undefined);
+		expect(sleep).toHaveBeenNthCalledWith(3, 40, undefined);
+	});
+
+	it("accumulates all errors in AggregateError", async () => {
+		const error1 = new Error("error 1");
+		const error2 = new Error("error 2");
+		const callback = vi
+			.fn()
+			.mockResolvedValueOnce({ type: "error", error: error1 })
+			.mockResolvedValueOnce({ type: "error", error: error2 });
+
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 2 });
+
+		try {
+			await backoff(callback);
+			expect.fail("Should have thrown");
+		} catch (error) {
+			expect(error).toBeInstanceOf(AggregateError);
+			expect((error as AggregateError).errors).toEqual([error1, error2]);
+		}
+	});
+
+	it("throws when aborted during retry sleep", async () => {
+		const { sleep } = await import("../../../src/utils/sleep.js");
+		const controller = new AbortController();
+		const callback = vi
+			.fn()
+			.mockResolvedValueOnce({ type: "error", error: new Error("fail") })
+			.mockResolvedValueOnce({ type: "success", value: "success" });
+
+		vi.mocked(sleep).mockImplementationOnce(async () => {
+			controller.abort();
+			throw new DOMException("Aborted", "AbortError");
+		});
+
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 3, signal: controller.signal });
+
+		await expect(backoff(callback)).rejects.toThrow(DOMException);
+		expect(callback).toHaveBeenCalledTimes(1);
+	});
+
+	it("checks abort status at the beginning of each retry loop", async () => {
+		const controller = new AbortController();
+		const callCount = counter();
+		const callback = vi.fn().mockImplementation(async () => {
+			callCount.increment();
+			if (callCount.value() === 2) {
+				controller.abort();
+			}
+			return { type: "error", error: new Error("fail") };
+		});
+
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 10, signal: controller.signal });
+
+		await expect(backoff(callback)).rejects.toThrow("Aborted");
+		expect(callback).toHaveBeenCalledTimes(2);
+	});
+
+	it("cleans up and does not call callback after abort", async () => {
+		const controller = new AbortController();
+		controller.abort();
+
+		const callback = vi.fn();
+		const backoff = exponentialBackoff({ baseDelayMs: 100, maxRetries: 5, signal: controller.signal });
+
+		await expect(backoff(callback)).rejects.toThrow("Aborted");
+
+		expect(callback).not.toHaveBeenCalled();
 	});
 });

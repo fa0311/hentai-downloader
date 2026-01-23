@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+import fs from "node:fs";
 import { parse } from "jsonc-parser";
 import z from "zod";
 import { HentaiZodParseError } from "../utils/error.js";
@@ -43,7 +43,7 @@ export type Query = z.infer<typeof querySchema>;
 export type Config = z.infer<typeof configSchema>;
 
 export const parseConfig = async (path: string) => {
-	const configJson = await fs.readFile(path, "utf-8");
+	const configJson = await fs.promises.readFile(path, "utf-8");
 	const parsed = await configSchema.safeParseAsync(parse(configJson));
 	if (parsed.success) {
 		return parsed.data;

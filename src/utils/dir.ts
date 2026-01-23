@@ -54,7 +54,6 @@ export const outputDir = async (basePath: string): Promise<OutputDescriptor> => 
 							promise.catch((e) => {
 								ac.abort();
 								errors.push(new HentaiPipelineError(`Failed to write file: ${filename}`, { cause: e }));
-								return null;
 							});
 							promises.push(promise);
 						},
@@ -64,7 +63,6 @@ export const outputDir = async (basePath: string): Promise<OutputDescriptor> => 
 							promise.catch((e) => {
 								ac.abort();
 								errors.push(new HentaiPipelineError(`Failed to write stream to file: ${filename}`, { cause: e }));
-								return null;
 							});
 							promises.push(promise);
 						},
@@ -98,7 +96,6 @@ export const outputZip = async (filePath: string): Promise<OutputDescriptor> => 
 			pipeline.catch((e) => {
 				ac.abort();
 				errors.push(new HentaiPipelineError(`Failed to write zip file: ${filePath}`, { cause: e }));
-				return null;
 			});
 			const throwIfErrors = async () => {
 				if (errors.length > 0) {

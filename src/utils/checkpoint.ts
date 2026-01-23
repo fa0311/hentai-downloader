@@ -5,7 +5,10 @@ export const loadCheckpoint = async (filePath: string | undefined): Promise<numb
 	if (filePath) {
 		if (await pathExists(filePath)) {
 			const data = await fs.promises.readFile(filePath, "utf8");
-			return data.split("\n").map((line) => Number(line));
+			return data
+				.split("\n")
+				.filter((line) => line.trim())
+				.map(Number);
 		}
 	}
 	return [];

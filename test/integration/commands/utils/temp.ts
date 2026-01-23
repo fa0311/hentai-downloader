@@ -4,14 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { unzip } from "./zip.js";
 
-export interface TempDir {
+export type TempDir = {
 	path: string;
 	join: (...segments: string[]) => string;
 	ls: (...segments: string[]) => Promise<string[]>;
 	access: (...segments: string[]) => Promise<boolean>;
 	hash: (...segments: string[]) => Promise<string>;
 	unzip: (...segments: string[]) => Promise<TempDir>;
-}
+};
 
 export const createTemp = async (addCleanup: (fn: () => Promise<void>) => void): Promise<TempDir> => {
 	const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "hentai-downloader-test-"));

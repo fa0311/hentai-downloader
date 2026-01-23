@@ -1,6 +1,6 @@
 import { runCommand } from "@oclif/test";
 import { afterEach, describe, expect, it } from "vitest";
-import { createIntegration } from "../utils/integration.js";
+import { createIntegration } from "./utils/integration.js";
 
 describe("download command integration tests", () => {
 	const integration = createIntegration();

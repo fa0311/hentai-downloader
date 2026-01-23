@@ -121,7 +121,7 @@ export const GalleryInfoSchema = z.strictObject({
 
 export type GalleryInfo = z.infer<typeof GalleryInfoSchema>;
 
-const removeNulls = (obj: Record<string, unknown>) => {
+export const removeNulls = (obj: Record<string, unknown>) => {
 	const entries = Object.entries(obj).map(([k, val]) => [k, val === null ? undefined : val]);
 	return Object.fromEntries(entries);
 };

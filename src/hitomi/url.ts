@@ -92,7 +92,11 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 	const searchMatch = searchPattern.exec(parsedUrl.href);
 	if (searchMatch) {
 		const searchParams = parsedUrl.searchParams;
-		const rawQuery = searchParams.keys().next().value ?? "";
+		const rawQuery = searchParams.keys().next().value;
+
+		if (!rawQuery) {
+			throw new Error("Invalid Hitomi.la search URL: No search keywords found");
+		}
 
 		const queries = decodeURIComponent(rawQuery)
 			.split(" ")

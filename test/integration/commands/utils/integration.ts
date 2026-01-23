@@ -1,10 +1,10 @@
-import type { TempDir } from "./temp.js";
-import { createTemp } from "./temp.js";
+import type { TempDir } from "./../utils/temp.js";
+import { createTemp } from "./../utils/temp.js";
 
-export interface Integration {
+export type Integration = {
 	temp: () => Promise<TempDir>;
 	afterEachCall: () => Promise<void>;
-}
+};
 
 export const createIntegration = (): Integration => {
 	const cleanup: Array<() => Promise<void>> = [];

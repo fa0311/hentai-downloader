@@ -38,10 +38,9 @@ describe("fitSymbol", () => {
 		expect(result.length).toBe(2);
 	});
 
-	it("returns string with consistent behavior", () => {
+	it("unicode check mark produces correct output", () => {
 		const result = fitSymbol("✓");
-		// Ensure it returns a string with some content
-		expect(typeof result).toBe("string");
-		expect(result.length).toBeGreaterThan(0);
+		expect(result).toBe("✓ ");
+		expect(result.length).toBe(2);
 	});
 });

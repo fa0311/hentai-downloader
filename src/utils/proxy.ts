@@ -70,9 +70,13 @@ export const parseProxyUrl = (proxyUrl: string[]) => {
 	}
 };
 
-export const initProxy = () => {
+export const getEnvProxy = () => {
 	const env = envSchema.parse(process.env);
-	const proxyUrl = [env.ALL_PROXY, env.HTTPS_PROXY, env.HTTP_PROXY].filter((v): v is string => Boolean(v));
+	return [env.ALL_PROXY, env.HTTPS_PROXY, env.HTTP_PROXY].filter((v): v is string => Boolean(v));
+};
+
+export const initProxy = () => {
+	const proxyUrl = getEnvProxy();
 	if (proxyUrl.length > 0) {
 		const proxy = parseProxyUrl(proxyUrl);
 		if (proxy) {
