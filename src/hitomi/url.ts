@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { unreachable } from "../utils/error.js";
 import type { SearchQuery } from "./list.js";
 
 const urlSchema = z.url();
@@ -43,13 +44,13 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 
 	const galleryMatch = galleryPattern.exec(parsedUrl.href);
 	if (galleryMatch) {
-		return Number(galleryMatch.pathname.groups.id!);
+		return Number(galleryMatch.pathname.groups.id);
 	}
 	const listMatch = listPattern.exec(parsedUrl.href);
 	if (listMatch) {
 		const query = (() => {
-			const name = decodeURIComponent(listMatch.pathname.groups.name!);
-			switch (listMatch.pathname.groups.type!) {
+			const name = decodeURIComponent(listMatch.pathname.groups.name ?? unreachable());
+			switch (listMatch.pathname.groups.type) {
 				case "artist":
 					return { artists: [name] };
 				case "group":
@@ -62,8 +63,6 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 					return { type: name };
 				case "tag":
 					return { tags: [name] };
-				default:
-					throw new Error("Unreachable code");
 			}
 		})();
 
@@ -73,7 +72,7 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 			groups: [],
 			tags: [],
 			artists: [],
-			language: listMatch.pathname.groups.language!,
+			language: listMatch.pathname.groups.language ?? "all",
 			...query,
 		};
 	}
@@ -86,18 +85,14 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 			groups: [],
 			tags: [],
 			artists: [],
-			language: indexMatch.pathname.groups.language!,
+			language: indexMatch.pathname.groups.language ?? "all",
 		};
 	}
 
 	const searchMatch = searchPattern.exec(parsedUrl.href);
 	if (searchMatch) {
 		const searchParams = parsedUrl.searchParams;
-		const rawQuery = searchParams.keys().next().value;
-
-		if (!rawQuery) {
-			throw new Error("Invalid Hitomi.la search URL: No search keywords found");
-		}
+		const rawQuery = searchParams.keys().next().value ?? "";
 
 		const queries = decodeURIComponent(rawQuery)
 			.split(" ")

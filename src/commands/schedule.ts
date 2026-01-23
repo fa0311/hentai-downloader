@@ -88,7 +88,6 @@ export default class Schedule extends Command {
 			timestamp: pino.stdTimeFunctions.isoTime,
 		});
 		if (initProxy()) logger.info(`Proxy enabled`);
-		const safeRequest = await createSafeRequest();
 
 		const onTick = async () => {
 			const start = performance.now();
@@ -128,11 +127,13 @@ export default class Schedule extends Command {
 						});
 						const outputDescriptor = fd.exists ? await fdFactory(config.ifExists) : fd;
 						await outputDescriptor?.create(async (fd) => {
+							const safeRequest = await createSafeRequest({ signal: fd.signal });
 							if (config.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
 							if (config.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
 							const promises = tasks.map(async (task, i, all) => {
 								const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file);
-								const response = await safeRequest(() => task.callback());
+								await fd.throwIfErrors();
+								const response = await safeRequest(() => task.callback(fd.signal));
 								const readStream = Readable.fromWeb(response.body);
 								fd.writeStream(filename, readStream);
 							});

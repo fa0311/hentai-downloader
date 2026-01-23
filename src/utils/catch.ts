@@ -2,9 +2,8 @@ import boxen from "boxen";
 import chalk from "chalk";
 import "dotenv/config";
 import ErrorStackParser from "error-stack-parser";
-import { ca } from "zod/locales";
 
-export const catchError = (error: any): string => {
+export const catchError = (error: unknown): string => {
 	if (error instanceof AggregateError) {
 		return catchErrorOne(
 			error,
@@ -22,13 +21,14 @@ export const catchError = (error: any): string => {
 
 const catchErrorOne = (error: Error, children: string[]) => {
 	const frames = ErrorStackParser.parse(error);
-	const className = (error as any)?.constructor?.name ?? "<unknown>";
+	const className = error.constructor?.name ?? "<unknown>";
 	const trace = boxen(chalk.gray(frames.map((f) => `at ${f.toString()}`).join("\n")), {
 		padding: 1,
 		borderColor: "gray",
 	});
 	const childrenMessage = children.length ? `\n\n${children.join("\n\n")}` : "";
-	return boxen(`${chalk.red(`${chalk.bold(className)}\n\n${error.message}`)}\n\n${trace}${childrenMessage}`, {
+	const cause = error.cause ? `\nCaused by: ${String(error.cause)}` : "";
+	return boxen(`${chalk.red(`${chalk.bold(className)}\n\n${error.message}${cause}`)}\n\n${trace}${childrenMessage}`, {
 		padding: 1,
 		borderColor: "red",
 	});

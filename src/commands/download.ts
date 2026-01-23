@@ -113,7 +113,6 @@ export default class Download extends Command {
 		const checkPoints = await loadCheckpoint(flags.checkpoint);
 		const paesedGalleryIds = await parseInput(args.input, additionalHeaders);
 		const galleryIds = differenceUint32Collections([paesedGalleryIds, checkPoints]);
-		const safeRequest = await createSafeRequest();
 		if (checkPoints.length > 0) {
 			const diff = paesedGalleryIds.length - galleryIds.length;
 			this.log(info(`Skipping ${diff} already downloaded galleries via checkpoint`));
@@ -144,21 +143,23 @@ export default class Download extends Command {
 						});
 						const outputDescriptor = fd.exists ? await fdFactory(flags.ifExists) : fd;
 						await outputDescriptor?.create(async (fd) => {
+							const safeRequest = await createSafeRequest({ signal: fd.signal });
 							const opt = { total: tasks.length, filename: galleries.japanese_title ?? galleries.title, hidden: false };
 							await multiBar.create(opt, async (b2) => {
 								if (flags.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, undefined, 2));
 								if (flags.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
 								const promises = tasks.map(async (task, i, all) => {
 									const filename = fillFilenamePlaceholders(args.filename, i, all.length, task.file);
-									const response = await safeRequest(() => task.callback());
+									const response = await safeRequest(async () => task.callback(fd.signal));
+									await fd.throwIfErrors();
 									const readStream = Readable.fromWeb(response.body);
 									fd.writeStream(filename, readStream);
 									b2.increment();
 								});
-								await Promise.all(promises);
+								await Promise.allSettled(promises);
 							});
-							await checkpoint?.line(String(galleryId));
 						});
+						await checkpoint?.line(String(galleryId));
 						b1.increment();
 					}
 				});

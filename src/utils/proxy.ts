@@ -84,6 +84,7 @@ export const initProxy = () => {
 				userId: proxy.username,
 				password: proxy.password,
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: globalThis typing
 			(globalThis as any)[Symbol.for("undici.globalDispatcher.1")] = dispatcher;
 			return true;
 		} else {

@@ -2,6 +2,9 @@ import type { z } from "zod";
 
 export class HentaiError extends Error {}
 
+export class HentaiAbortError extends HentaiError {}
+export class HentaiUnreachableError extends HentaiError {}
+
 export class HentaiParseError extends HentaiError {}
 export class HentaiZodParseError<T> extends HentaiParseError {
 	constructor(message: string, error: z.ZodError<T>) {
@@ -12,3 +15,9 @@ export class HentaiZodParseError<T> extends HentaiParseError {
 
 export class HentaiHttpError extends HentaiError {}
 export class HentaiAlreadyExistsError extends HentaiError {}
+
+export class HentaiPipelineError extends HentaiError {}
+
+export const unreachable = () => {
+	throw new HentaiUnreachableError("Unreachable code");
+};

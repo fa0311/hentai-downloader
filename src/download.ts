@@ -8,9 +8,10 @@ import { HentaiHttpError } from "./utils/error.js";
 
 type NonNullBodyResponse = Response & { body: NonNullable<Response["body"]> };
 
-export const createSafeRequest = async () => {
+type SafeRequestParam = { signal?: AbortSignal };
+export const createSafeRequest = async ({ signal }: SafeRequestParam) => {
 	const semaphore = new Semaphore(5);
-	const backoff = exponentialBackoff({ baseDelayMs: 500, maxRetries: 10 });
+	const backoff = exponentialBackoff({ baseDelayMs: 500, maxRetries: 7, signal: signal });
 
 	return (callback: () => Promise<Response>) => {
 		return semaphore.runExclusive(async () => {
@@ -39,7 +40,7 @@ type GetHitomiMangaList = {
 	additionalHeaders?: Record<string, string>;
 };
 export const getHitomiMangaList = async ({ query, additionalHeaders }: GetHitomiMangaList) => {
-	const safeRequest = await createSafeRequest();
+	const safeRequest = await createSafeRequest({});
 	const tasks = await downloadHitomiNozomiList({ query, additionalHeaders });
 	const gallerieIdList = await Promise.all(
 		tasks.map(async (task) => {

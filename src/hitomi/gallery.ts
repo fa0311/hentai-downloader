@@ -194,13 +194,14 @@ type DownloadHitomiParam = {
 
 const downloadVideo = async ({ videofilename, headers }: DownloadHitomiParam) => {
 	const streamFile = getStreamUrlFromVideoFilename(videofilename);
-	const callback = async () => {
+	const callback = async (signal: AbortSignal) => {
 		const response = await fetch(streamFile, {
 			headers: {
 				...headers,
 				accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
 				range: "bytes=0-",
 			},
+			signal: signal,
 		});
 		return response;
 	};
@@ -214,11 +215,15 @@ type DownloadHitomiGalleriesParam = {
 };
 
 export type DownloadFileInfo =
-	| { type: "image"; file: GalleryInfoFile; callback: () => Promise<Response> }
+	| {
+			type: "image";
+			file: GalleryInfoFile;
+			callback: (signal: AbortSignal) => Promise<Response>;
+	  }
 	| {
 			type: "video";
 			file: { name: string };
-			callback: () => Promise<Response>;
+			callback: (signal: AbortSignal) => Promise<Response>;
 	  };
 
 export const downloadHitomiGalleries = async ({ galleryId, additionalHeaders = {} }: DownloadHitomiGalleriesParam) => {
