@@ -222,8 +222,8 @@ export const generateComicInfoXml = (info: ComicInfoXml) => {
 
 export const galleryInfoToComicInfo = (info: GalleryInfo) => {
 	return generateComicInfoXml({
-		title: info.title,
-		series: info.title,
+		title: info.japanese_title ?? info.title,
+		series: info.japanese_title ?? info.title,
 		number: 1,
 		count: 1,
 		volume: 1,
@@ -234,7 +234,7 @@ export const galleryInfoToComicInfo = (info: GalleryInfo) => {
 		tags: info.tags?.map((tag) => tag.tag),
 		web: [`https://hitomi.la/gallery/${info.id}.html`],
 		pageCount: info.files.length,
-		languageISO: info.language,
+		languageISO: info.language ? pageLangToBCP47(info.language) : undefined,
 		format: info.type || "imageset",
 		characters: info.characters?.map((char) => char.character),
 		scanInformation: "Source: hitomi.la",
@@ -245,6 +245,99 @@ export const galleryInfoToComicInfo = (info: GalleryInfo) => {
 			imageWidth: file.width,
 			imageHeight: file.height,
 		})),
-		localizedSeries: info.japanese_title,
+		localizedSeries: info.title,
 	});
+};
+
+const pageLangToBCP47 = (key: string): string => {
+	switch (key) {
+		case "indonesian":
+			return "id-ID";
+		case "javanese":
+			return "jv-ID";
+		case "catalan":
+			return "ca-ES";
+		case "cebuano":
+			return "ceb-PH";
+		case "czech":
+			return "cs-CZ";
+		case "danish":
+			return "da-DK";
+		case "german":
+			return "de-DE";
+		case "estonian":
+			return "et-EE";
+		case "english":
+			return "en-US";
+		case "spanish":
+			return "es-ES";
+		case "esperanto":
+			return "eo";
+		case "french":
+			return "fr-FR";
+		case "hindi":
+			return "hi-IN";
+		case "icelandic":
+			return "is-IS";
+		case "italian":
+			return "it-IT";
+		case "latin":
+			return "la";
+		case "hungarian":
+			return "hu-HU";
+		case "dutch":
+			return "nl-NL";
+		case "norwegian":
+			return "nb-NO";
+		case "polish":
+			return "pl-PL";
+		case "portuguese":
+			return "pt-PT";
+		case "romanian":
+			return "ro-RO";
+		case "albanian":
+			return "sq-AL";
+		case "slovak":
+			return "sk-SK";
+		case "serbian":
+			return "sr-Latn-RS";
+		case "finnish":
+			return "fi-FI";
+		case "swedish":
+			return "sv-SE";
+		case "tagalog":
+			return "tl-PH";
+		case "vietnamese":
+			return "vi-VN";
+		case "turkish":
+			return "tr-TR";
+		case "greek":
+			return "el-GR";
+		case "bulgarian":
+			return "bg-BG";
+		case "mongolian":
+			return "mn-MN";
+		case "russian":
+			return "ru-RU";
+		case "ukrainian":
+			return "uk-UA";
+		case "hebrew":
+			return "he-IL";
+		case "arabic":
+			return "ar-SA";
+		case "persian":
+			return "fa-IR";
+		case "thai":
+			return "th-TH";
+		case "burmese":
+			return "my-MM";
+		case "korean":
+			return "ko-KR";
+		case "chinese":
+			return "zh-Hans-CN";
+		case "japanese":
+			return "ja-JP";
+		default:
+			return "und";
+	}
 };
