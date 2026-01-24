@@ -34,6 +34,7 @@
   },
   "author": "fa0311",
   "license": "MIT",
+  "packageManager": "pnpm@10.14.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/fa0311/hentai-downloader.git"
