@@ -113,7 +113,6 @@ export default class Download extends Command {
 		const checkPoints = await loadCheckpoint(flags.checkpoint);
 		const paesedGalleryIds = await parseInput(args.input, additionalHeaders);
 		const galleryIds = differenceUint32Collections([paesedGalleryIds, checkPoints]);
-		this.log(info(`Found ${galleryIds.length} new galleries to download`));
 		await outputFile(async (checkpointDiscriptor) => {
 			const checkpoint = flags.checkpoint ? await checkpointDiscriptor.create(flags.checkpoint, "a") : null;
 			await progress({ hidden: flags.quiet }, async (multiBar) => {
