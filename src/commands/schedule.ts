@@ -103,17 +103,14 @@ export default class Schedule extends Command {
 			const paesedGalleryIdsNested = await Promise.all(config.queries.map(async (inputQuery) => await parseQuery(inputQuery)));
 			const paesedGalleryIds = paesedGalleryIdsNested.flat();
 			const galleryIds = differenceUint32Collections([paesedGalleryIds, checkPoints]);
-			if (checkPoints.length > 0) {
-				const diff = paesedGalleryIds.length - galleryIds.length;
-				logger.info(`Skipping ${diff} already downloaded galleries via checkpoint`);
-			}
+			logger.info(`Found ${galleryIds.length} new galleries to download`);
 			logger.debug(`Downloading galleries: ${JSON.stringify(galleryIds)}`);
 			await outputFile(async (checkpointDiscriptor) => {
 				const checkpoint = config.checkpoint ? await checkpointDiscriptor.create(config.checkpoint, "a") : null;
 
 				for (const galleryId of galleryIds) {
 					try {
-						logger.info(`Downloading galleries: ${galleryId}`);
+						logger.info(`Downloading gallery ${galleryId}`);
 						const [galleries, allTasks] = await downloadHitomiGalleries({ galleryId, additionalHeaders });
 						const tasks = config.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
 						const pathname = fillGalleryPlaceholders(config.output, galleries);
