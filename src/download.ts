@@ -11,7 +11,7 @@ type NonNullBodyResponse = Response & { body: NonNullable<Response["body"]> };
 type SafeRequestParam = { signal?: AbortSignal };
 export const createSafeRequest = async ({ signal }: SafeRequestParam) => {
 	const semaphore = new Semaphore(5);
-	const backoff = exponentialBackoff({ baseDelayMs: 500, maxRetries: 7, signal: signal });
+	const backoff = exponentialBackoff({ baseDelayMs: 500, maxRetries: 10, signal: signal });
 
 	return (callback: () => Promise<Response>) => {
 		return semaphore.runExclusive(async () => {
