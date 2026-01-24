@@ -5,6 +5,7 @@ import { downloadHitomiNozomiList, extractNozomiGalleryIds, type SearchQuery } f
 import { exponentialBackoff } from "./utils/backoff.js";
 import { intersectUint32Collections } from "./utils/bitmap.js";
 import { HentaiHttpError } from "./utils/error.js";
+import { result } from "./utils/result.js";
 
 type NonNullBodyResponse = Response & { body: NonNullable<Response["body"]> };
 
@@ -16,20 +17,21 @@ export const createSafeRequest = async ({ signal }: SafeRequestParam) => {
 	return (callback: () => Promise<Response>) => {
 		return semaphore.runExclusive(async () => {
 			return backoff(async () => {
-				const response = await callback();
-				if (response.status === 503) {
-					return {
-						type: "error",
-						error: new HentaiHttpError(`Service unavailable (503)`),
-					};
+				const response = await result(callback());
+				if (response.ok) {
+					if (response.value.status === 503) {
+						return { type: "error", error: new HentaiHttpError(`Service unavailable (503) for ${response.value.url}`) };
+					}
+					if (!response.value.ok) {
+						throw new HentaiHttpError(`HTTP error: ${response.value.status} ${response.value.statusText} for ${response.value.url}`);
+					}
+					if (response.value.body) {
+						return { type: "success", value: response.value as NonNullBodyResponse };
+					}
+					throw new HentaiHttpError(`Response has no body for ${response.value.url}`);
+				} else {
+					return { type: "error", error: response.error };
 				}
-				if (!response.ok) {
-					throw new HentaiHttpError(`HTTP error: ${response.status} ${response.statusText}`);
-				}
-				if (response.body) {
-					return { type: "success", value: response as NonNullBodyResponse };
-				}
-				throw new HentaiHttpError(`Response has no body`);
 			});
 		});
 	};
