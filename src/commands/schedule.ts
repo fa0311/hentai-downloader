@@ -14,6 +14,7 @@ import { initProxy } from "./../utils/proxy.js";
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
+import { Semaphore } from "async-mutex";
 import pino from "pino";
 import { differenceUint32Collections } from "../utils/bitmap.js";
 import { loadCheckpoint } from "../utils/checkpoint.js";
@@ -22,21 +23,24 @@ import { HentaiAlreadyExistsError } from "../utils/error.js";
 import { outputFile } from "../utils/file.js";
 import { exhaustiveMatchAsync } from "../utils/match.js";
 
-const parseInputQuery = async (inputQuery: Query) => {
-	switch (inputQuery.type) {
-		case "id":
-			return [inputQuery.id];
-		case "url": {
-			const query = parseHitomiUrl(inputQuery.url);
-			if (typeof query === "number") {
-				return [query];
-			} else {
-				return await getHitomiMangaList({ query });
+const parseInputQuery = () => {
+	const gallerySemaphore = new Semaphore(5);
+	return async (inputQuery: Query) => {
+		switch (inputQuery.type) {
+			case "id":
+				return [inputQuery.id];
+			case "url": {
+				const query = parseHitomiUrl(inputQuery.url);
+				if (typeof query === "number") {
+					return [query];
+				} else {
+					return gallerySemaphore.runExclusive(() => getHitomiMangaList({ query }));
+				}
 			}
+			case "query":
+				return gallerySemaphore.runExclusive(() => getHitomiMangaList({ query: inputQuery.query }));
 		}
-		case "query":
-			return await getHitomiMangaList({ query: inputQuery.query });
-	}
+	};
 };
 
 const outputTimestamp = (filename: string, errorHandler: (error: unknown) => void) => {
@@ -94,7 +98,10 @@ export default class Schedule extends Command {
 			logger.info("Starting scheduled download task");
 			const additionalHeaders = await getChromeHeader();
 			const checkPoints = await loadCheckpoint(config.checkpoint);
-			const paesedGalleryIds = (await Promise.all(config.queries.map(async (query) => parseInputQuery(query)))).flat();
+			const parseQuery = parseInputQuery();
+			logger.info("Getting gallery list from queries");
+			const paesedGalleryIdsNested = await Promise.all(config.queries.map(async (inputQuery) => await parseQuery(inputQuery)));
+			const paesedGalleryIds = paesedGalleryIdsNested.flat();
 			const galleryIds = differenceUint32Collections([paesedGalleryIds, checkPoints]);
 			if (checkPoints.length > 0) {
 				const diff = paesedGalleryIds.length - galleryIds.length;
