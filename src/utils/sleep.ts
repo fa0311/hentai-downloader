@@ -9,9 +9,6 @@ export const sleep = async (ms: number, signal?: AbortSignal) => {
 		reject(new DOMException("Aborted", "AbortError"));
 	};
 	signal?.addEventListener("abort", listener, { once: true });
-	try {
-		await promise;
-	} finally {
-		signal?.removeEventListener("abort", listener);
-	}
+	await promise;
+	signal?.removeEventListener("abort", listener);
 };
