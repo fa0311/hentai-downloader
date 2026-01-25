@@ -13,6 +13,11 @@ export const pathExists = async (targetPath: string) => {
 	}
 };
 
+export const ensureDir = (dirPath: string) => {
+	const parts = dirPath.split("/").filter(Boolean);
+	return parts.reduce<string[]>((acc, p) => acc.concat(acc.length ? `${acc[acc.length - 1]}/${p}` : p), []);
+};
+
 export type OutputDirHandler = {
 	signal: AbortSignal;
 	writeFile: (filename: string, output: string) => void;
@@ -50,21 +55,25 @@ export const outputDir = async (basePath: string): Promise<OutputDescriptor> => 
 					await callback({
 						signal: ac.signal,
 						writeFile: (filename: string, output: string) => {
-							const promise = fs.promises.writeFile(path.join(basePath, filename), output, { signal: ac.signal });
-							promise.catch((e) => {
-								ac.abort();
-								errors.push(new HentaiPipelineError(`Failed to write file: ${filename}`, { cause: e }));
-							});
-							promises.push(promise);
+							const create = async () => {
+								await fs.promises.mkdir(path.dirname(path.join(basePath, filename)), { recursive: true });
+								await fs.promises.writeFile(path.join(basePath, filename), output, { signal: ac.signal }).catch((e) => {
+									ac.abort();
+									errors.push(new HentaiPipelineError(`Failed to write file: ${filename}`, { cause: e }));
+								});
+							};
+							promises.push(create());
 						},
 						writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
-							const writeStream = fs.createWriteStream(path.join(basePath, filename));
-							const promise = stream.promises.pipeline(readStream, writeStream, { signal: ac.signal });
-							promise.catch((e) => {
-								ac.abort();
-								errors.push(new HentaiPipelineError(`Failed to write stream to file: ${filename}`, { cause: e }));
-							});
-							promises.push(promise);
+							const create = async () => {
+								await fs.promises.mkdir(path.dirname(path.join(basePath, filename)), { recursive: true });
+								const writeStream = fs.createWriteStream(path.join(basePath, filename));
+								await stream.promises.pipeline(readStream, writeStream, { signal: ac.signal }).catch((e) => {
+									ac.abort();
+									errors.push(new HentaiPipelineError(`Failed to write stream to file: ${filename}`, { cause: e }));
+								});
+							};
+							promises.push(create());
 						},
 						throwIfErrors: throwIfErrors,
 					});
@@ -107,14 +116,16 @@ export const outputZip = async (filePath: string): Promise<OutputDescriptor> => 
 					await callback({
 						signal: ac.signal,
 						writeFile: (filename: string, output: string) => {
-							zip.addBuffer(Buffer.from(output, "utf-8"), filename, {
-								compress: false,
-							});
+							for (const name in ensureDir(path.dirname(filename)).slice(0, -1)) {
+								zip.addEmptyDirectory(`${name}/`);
+							}
+							zip.addBuffer(Buffer.from(output, "utf-8"), filename, { compress: false });
 						},
 						writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
-							zip.addReadStream(readStream, filename, {
-								compress: false,
-							});
+							for (const name in ensureDir(path.dirname(filename)).slice(0, -1)) {
+								zip.addEmptyDirectory(`${name}/`);
+							}
+							zip.addReadStream(readStream, filename, { compress: false });
 						},
 						throwIfErrors: throwIfErrors,
 					});

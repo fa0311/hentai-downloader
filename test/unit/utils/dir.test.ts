@@ -1,6 +1,6 @@
 import { Readable, Writable } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { outputDir, outputZip, pathExists } from "../../../src/utils/dir.js";
+import { ensureDir, outputDir, outputZip, pathExists } from "../../../src/utils/dir.js";
 import { createLate } from "../../../src/utils/late.js";
 
 vi.mock("node:fs", () => {
@@ -94,6 +94,13 @@ describe("pathExists", () => {
 
 		expect(result1).toBe(true);
 		expect(result2).toBe(false);
+	});
+});
+
+describe("ensureDir", () => {
+	it("returns correct directory parts", async () => {
+		const result = ensureDir("a/b/c/d");
+		expect(result).toEqual(["a", "a/b", "a/b/c", "a/b/c/d"]);
 	});
 });
 
