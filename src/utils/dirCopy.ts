@@ -96,6 +96,7 @@ export const copyZip = async (input: string) => {
 			});
 		},
 		open: async (output: string, callback: (descriptor: OutputDirHandler) => Promise<void>) => {
+			await fs.promises.mkdir(path.dirname(output), { recursive: true });
 			const outZip = new yazl.ZipFile();
 			const writeStream = fs.createWriteStream(output);
 			const pipeline = stream.promises.pipeline(outZip.outputStream, writeStream);
