@@ -223,7 +223,7 @@ export const generateComicInfoXml = (info: ComicInfoXml) => {
 export const galleryInfoToComicInfo = (info: GalleryInfo) => {
 	return generateComicInfoXml({
 		title: info.japanese_title ?? info.title,
-		series: `hitomi${info.id}`,
+		// series: info.japanese_title ?? info.title,
 		number: 1,
 		count: 1,
 		volume: 1,
