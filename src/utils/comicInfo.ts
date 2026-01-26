@@ -223,7 +223,7 @@ export const generateComicInfoXml = (info: ComicInfoXml) => {
 export const galleryInfoToComicInfo = (info: GalleryInfo) => {
 	return generateComicInfoXml({
 		title: info.japanese_title ?? info.title,
-		series: `${info.japanese_title ?? info.title}-${info.id}`,
+		series: `${info.japanese_title ?? info.title} [${info.id}]`,
 		number: 1,
 		count: 1,
 		volume: 1,
@@ -245,7 +245,7 @@ export const galleryInfoToComicInfo = (info: GalleryInfo) => {
 			imageWidth: file.width,
 			imageHeight: file.height,
 		})),
-		localizedSeries: info.title,
+		localizedSeries: `${info.title} [${info.id}]`,
 	});
 };
 
