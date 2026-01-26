@@ -16,7 +16,7 @@ describe("download command integration tests", () => {
 		expect(await temp.hash("3287639", "2.jpg")).toEqual("110daeed9dc9e413132e5af785a50ac09b75ca3c19937aaee102179033122d4a");
 		expect(await temp.hash("3287639", "3.jpg")).toEqual("d8327836aedbae90117ba2519c4ec2f68179e2619d1cf29f8b5415e0130c0c9b");
 		expect(await temp.hash("3287639", "4.jpg")).toEqual("2d8d44d11a94183a975b5e614acf32dde1f1b265f6ec9ce090d73d6eae70fbd3");
-		expect(await temp.hash("3287639", "ComicInfo.xml")).toEqual("3954c57386e2f1c487f95e84448060dea6a929267dc2da7e818a5f45944f3edd");
+		expect(await temp.hash("3287639", "ComicInfo.xml")).toEqual("d0fc2f07919cdc8cc02ce7125466a6bd1d68554b1cefd1ccd94357a7f6640206");
 	});
 
 	it("download and zip single gallery", async () => {
@@ -30,6 +30,6 @@ describe("download command integration tests", () => {
 		expect(await unzip.hash("2.jpg")).toEqual("110daeed9dc9e413132e5af785a50ac09b75ca3c19937aaee102179033122d4a");
 		expect(await unzip.hash("3.jpg")).toEqual("d8327836aedbae90117ba2519c4ec2f68179e2619d1cf29f8b5415e0130c0c9b");
 		expect(await unzip.hash("4.jpg")).toEqual("2d8d44d11a94183a975b5e614acf32dde1f1b265f6ec9ce090d73d6eae70fbd3");
-		expect(await unzip.hash("ComicInfo.xml")).toEqual("3954c57386e2f1c487f95e84448060dea6a929267dc2da7e818a5f45944f3edd");
+		expect(await unzip.hash("ComicInfo.xml")).toEqual("d0fc2f07919cdc8cc02ce7125466a6bd1d68554b1cefd1ccd94357a7f6640206");
 	});
 });
