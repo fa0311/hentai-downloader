@@ -1,6 +1,7 @@
 import { Args, Command, Flags } from "@oclif/core";
 import "dotenv/config";
 import { Readable } from "node:stream";
+import { Semaphore } from "async-mutex";
 import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
 import { downloadHitomiGalleries } from "./../hitomi/gallery.js";
 import { parseHitomiUrl } from "./../hitomi/url.js";
@@ -144,13 +145,17 @@ export default class Download extends Command {
 							await multiBar.create(opt, async (b2) => {
 								if (flags.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, undefined, 2));
 								if (flags.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
+								const semaphore = new Semaphore(10);
 								const promises = tasks.map(async (task, i, all) => {
-									const filename = fillFilenamePlaceholders(args.filename, i, all.length, task.file);
-									const response = await safeRequest(async () => task.callback(fd.signal));
-									await fd.throwIfErrors();
-									const readStream = Readable.fromWeb(response.body);
-									fd.writeStream(filename, readStream);
-									b2.increment();
+									await semaphore.runExclusive(async () => {
+										const filename = fillFilenamePlaceholders(args.filename, i, all.length, task.file);
+										const response = await safeRequest(async () => task.callback(fd.signal));
+										await fd.throwIfErrors();
+										const readStream = Readable.fromWeb(response.body);
+										fd.writeStream(filename, readStream);
+										b2.increment();
+										await new Promise((resolve) => readStream.on("end", resolve));
+									});
 								});
 								await Promise.allSettled(promises);
 							});

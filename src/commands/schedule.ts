@@ -134,12 +134,16 @@ export default class Schedule extends Command {
 							const safeRequest = await createSafeRequest({ signal: fd.signal });
 							if (config.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
 							if (config.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
+							const semaphore = new Semaphore(10);
 							const promises = tasks.map(async (task, i, all) => {
-								const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file);
-								await fd.throwIfErrors();
-								const response = await safeRequest(() => task.callback(fd.signal));
-								const readStream = Readable.fromWeb(response.body);
-								fd.writeStream(filename, readStream);
+								await semaphore.runExclusive(async () => {
+									const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file);
+									await fd.throwIfErrors();
+									const response = await safeRequest(() => task.callback(fd.signal));
+									const readStream = Readable.fromWeb(response.body);
+									fd.writeStream(filename, readStream);
+									await new Promise((resolve) => readStream.on("end", resolve));
+								});
 							});
 							await Promise.all(promises);
 						});
