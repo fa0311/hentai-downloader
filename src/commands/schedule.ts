@@ -131,7 +131,7 @@ export default class Schedule extends Command {
 						});
 						const outputDescriptor = fd.exists ? await fdFactory(config.ifExists) : fd;
 						await outputDescriptor?.create(async (fd) => {
-							const safeRequest = await createSafeRequest({ signal: fd.signal });
+							const safeRequest = await createSafeRequest({ signal: fd.signal, maxRetries: 30 });
 							if (config.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
 							if (config.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
 							const semaphore = new Semaphore(10);

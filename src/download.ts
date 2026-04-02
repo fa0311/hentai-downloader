@@ -2,17 +2,22 @@ import path from "node:path";
 import { Semaphore } from "async-mutex";
 import type { DownloadFileInfo, GalleryInfo } from "./hitomi/gallery.js";
 import { downloadHitomiNozomiList, extractNozomiGalleryIds, type SearchQuery } from "./hitomi/list.js";
-import { exponentialBackoff } from "./utils/backoff.js";
+import { exponentialBackoffFactory, maxDelayChain, runBackoff } from "./utils/backoff.js";
 import { intersectUint32Collections } from "./utils/bitmap.js";
 import { HentaiHttpError } from "./utils/error.js";
 import { result } from "./utils/result.js";
 
 type NonNullBodyResponse = Response & { body: NonNullable<Response["body"]> };
 
-type SafeRequestParam = { signal?: AbortSignal };
-export const createSafeRequest = async ({ signal }: SafeRequestParam) => {
+type SafeRequestParam = { signal?: AbortSignal; maxRetries: number };
+export const createSafeRequest = async ({ signal, maxRetries }: SafeRequestParam) => {
 	const semaphore = new Semaphore(5);
-	const backoff = exponentialBackoff({ baseDelayMs: 500, maxRetries: 10, signal: signal });
+	const backoff = runBackoff({
+		delayFactory: exponentialBackoffFactory({ baseDelayMs: 500 }),
+		chain: [maxDelayChain(60000)],
+		maxRetries,
+		signal,
+	});
 
 	return (callback: () => Promise<Response>) => {
 		return semaphore.runExclusive(async () => {
@@ -42,7 +47,7 @@ type GetHitomiMangaList = {
 	additionalHeaders?: Record<string, string>;
 };
 export const getHitomiMangaList = async ({ query, additionalHeaders }: GetHitomiMangaList) => {
-	const safeRequest = await createSafeRequest({});
+	const safeRequest = await createSafeRequest({ maxRetries: 10 });
 	const tasks = await downloadHitomiNozomiList({ query, additionalHeaders });
 	const gallerieIdList = await Promise.all(
 		tasks.map(async (task) => {

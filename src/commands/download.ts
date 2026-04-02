@@ -140,7 +140,7 @@ export default class Download extends Command {
 						});
 						const outputDescriptor = fd.exists ? await fdFactory(flags.ifExists) : fd;
 						await outputDescriptor?.create(async (fd) => {
-							const safeRequest = await createSafeRequest({ signal: fd.signal });
+							const safeRequest = await createSafeRequest({ signal: fd.signal, maxRetries: 10 });
 							const opt = { total: tasks.length, filename: galleries.japanese_title ?? galleries.title, hidden: false };
 							await multiBar.create(opt, async (b2) => {
 								if (flags.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, undefined, 2));
