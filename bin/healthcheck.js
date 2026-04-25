@@ -8,9 +8,16 @@ const checkHeartbeat = async (path, max) => {
 }
 
 const checkStatus = async (path) => {
+  try {
     const data = await fs.promises.readFile(path, "utf8");
     return data.trim() === "true";
-}
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return true;
+    }
+    throw error;
+  }
+};
 
 const hb = await checkHeartbeat( process.env.HEARTBEAT_PATH, 120);
 const db = await checkStatus( process.env.COMPLETION_STATUS_PATH );
