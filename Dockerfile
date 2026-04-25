@@ -30,6 +30,6 @@ ENTRYPOINT ["node", "./bin/run.js", "schedule"]
 CMD ["schedule.json"]
 
 ENV HEARTBEAT_PATH=/tmp/heartbeat.epoch
-ENV LAST_SUCCESS_PATH=/tmp/last_success.epoch
+ENV COMPLETION_STATUS_PATH=/tmp/completion_status
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD ["node", "./bin/healthcheck.js"]

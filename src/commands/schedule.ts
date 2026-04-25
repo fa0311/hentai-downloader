@@ -50,6 +50,13 @@ const outputTimestamp = (filename: string, errorHandler: (error: unknown) => voi
 	})().catch(errorHandler);
 };
 
+const outputResult = (filename: string, result: boolean, errorHandler: (error: unknown) => void) => {
+	(async () => {
+		await fs.promises.mkdir(path.dirname(filename), { recursive: true });
+		await fs.promises.writeFile(filename, `${result}\n`, "utf8");
+	})().catch(errorHandler);
+};
+
 export default class Schedule extends Command {
 	static description = "Run scheduled downloads based on configuration file";
 
@@ -147,12 +154,15 @@ export default class Schedule extends Command {
 							});
 							await Promise.all(promises);
 						});
-						if (env.LAST_SUCCESS_PATH) {
-							outputTimestamp(env.LAST_SUCCESS_PATH, logger.error);
-						}
 						await checkpoint?.line(String(galleryId));
+						if (env.COMPLETION_STATUS_PATH) {
+							outputResult(env.COMPLETION_STATUS_PATH, true, logger.error);
+						}
 						logger.debug(`Finished downloading gallery ${galleryId} to ${pathname}`);
 					} catch (error) {
+						if (env.COMPLETION_STATUS_PATH) {
+							outputResult(env.COMPLETION_STATUS_PATH, false, logger.error);
+						}
 						logger.error(error);
 					}
 				}
@@ -163,11 +173,6 @@ export default class Schedule extends Command {
 			const minutes = Math.floor((duration / (1000 * 60)) % 60);
 			return logger.info(`Scheduled download task completed in ${minutes}m ${seconds}s`);
 		};
-
-		if (env.LAST_SUCCESS_PATH) {
-			outputTimestamp(env.LAST_SUCCESS_PATH, logger.error);
-		}
-
 		if (env.HEARTBEAT_PATH) {
 			const pathname = env.HEARTBEAT_PATH;
 			outputTimestamp(pathname, logger.error);

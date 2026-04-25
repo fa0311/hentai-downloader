@@ -9,7 +9,7 @@ const envSchema = z.object({
 		.transform((val) => val.toLowerCase() === "true")
 		.default(false),
 	HEARTBEAT_PATH: z.string().optional(),
-	LAST_SUCCESS_PATH: z.string().optional(),
+	COMPLETION_STATUS_PATH: z.string().optional(),
 	TZ: z.string().default("UTC"),
 });
 

@@ -118,8 +118,8 @@ TZ=Asia/Tokyo
 # Heartbeat timestamp file (updated every 60 seconds)
 HEARTBEAT_PATH=/app/data/heartbeat
 
-# Last success timestamp file (updated on successful download)
-LAST_SUCCESS_PATH=/app/data/last_success
+# Completion status file (updated on successful download)
+COMPLETION_STATUS_PATH=/tmp/completion_status
 ```
 
 ## 🎨 Placeholders
