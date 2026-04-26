@@ -32,4 +32,4 @@ CMD ["schedule.json"]
 ENV HEARTBEAT_PATH=/tmp/heartbeat.epoch
 ENV COMPLETION_STATUS_PATH=/tmp/completion_status
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD ["node", "./bin/healthcheck.js"]
+HEALTHCHECK --interval=1m --timeout=5s --start-period=20s --retries=1 CMD ["node", "./bin/healthcheck.js"]
