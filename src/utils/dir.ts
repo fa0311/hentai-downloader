@@ -116,13 +116,13 @@ export const outputZip = async (filePath: string): Promise<OutputDescriptor> => 
 					await callback({
 						signal: ac.signal,
 						writeFile: (filename: string, output: string) => {
-							for (const name in ensureDir(path.dirname(filename)).slice(0, -1)) {
+							for (const name of ensureDir(path.dirname(filename)).slice(0, -1)) {
 								zip.addEmptyDirectory(`${name}/`);
 							}
 							zip.addBuffer(Buffer.from(output, "utf-8"), filename, { compress: false });
 						},
 						writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
-							for (const name in ensureDir(path.dirname(filename)).slice(0, -1)) {
+							for (const name of ensureDir(path.dirname(filename)).slice(0, -1)) {
 								zip.addEmptyDirectory(`${name}/`);
 							}
 							zip.addReadStream(readStream, filename, { compress: false });

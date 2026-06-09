@@ -113,14 +113,14 @@ export const copyZip = async (input: string) => {
 
 			await callback({
 				writeFile: (filename: string, data: string) => {
-					for (const name in ensureDir(path.dirname(filename)).slice(0, -1)) {
+					for (const name of ensureDir(path.dirname(filename)).slice(0, -1)) {
 						outZip.addEmptyDirectory(`${name}/`);
 					}
 					outZip.addBuffer(Buffer.from(data), filename, { compress: false });
 					override.push(filename);
 				},
 				writeStream: (filename: string, readStream: NodeJS.ReadableStream) => {
-					for (const name in ensureDir(path.dirname(filename)).slice(0, -1)) {
+					for (const name of ensureDir(path.dirname(filename)).slice(0, -1)) {
 						outZip.addEmptyDirectory(`${name}/`);
 					}
 					outZip.addReadStream(readStream, filename, { compress: false });

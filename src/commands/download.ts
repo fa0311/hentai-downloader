@@ -1,6 +1,7 @@
 import { Args, Command, Flags } from "@oclif/core";
 import "dotenv/config";
 import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
 import { Semaphore } from "async-mutex";
 import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
 import { downloadHitomiGalleries } from "./../hitomi/gallery.js";
@@ -154,10 +155,10 @@ export default class Download extends Command {
 										const readStream = Readable.fromWeb(response.body);
 										fd.writeStream(filename, readStream);
 										b2.increment();
-										await new Promise((resolve) => readStream.on("end", resolve));
+										await finished(readStream).catch(() => {});
 									});
 								});
-								await Promise.allSettled(promises);
+								await Promise.all(promises);
 							});
 						});
 						await checkpoint?.line(String(galleryId));

@@ -39,6 +39,6 @@ export const outputFile = async (callback: OutputCallback) => {
 			},
 		});
 	} finally {
-		await Promise.all(cleanup.map((fn) => fn));
+		await Promise.all(cleanup.map((fn) => fn()));
 	}
 };

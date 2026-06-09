@@ -1,6 +1,7 @@
 import { Args, Command, Flags } from "@oclif/core";
 import "dotenv/config";
 import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
 import { CronJob } from "cron";
 import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
 import { downloadHitomiGalleries } from "./../hitomi/gallery.js";
@@ -149,7 +150,7 @@ export default class Schedule extends Command {
 									const response = await safeRequest(() => task.callback(fd.signal));
 									const readStream = Readable.fromWeb(response.body);
 									fd.writeStream(filename, readStream);
-									await new Promise((resolve) => readStream.on("end", resolve));
+									await finished(readStream).catch(() => {});
 								});
 							});
 							await Promise.all(promises);
