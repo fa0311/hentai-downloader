@@ -6,7 +6,7 @@ $ npm install -g hentai-downloader
 $ hentai-downloader COMMAND
 running command...
 $ hentai-downloader (--version)
-hentai-downloader/1.0.0 win32-x64 node-v24.12.0
+hentai-downloader/1.0.0 linux-x64 node-v24.16.0
 $ hentai-downloader --help [COMMAND]
 USAGE
   $ hentai-downloader COMMAND
@@ -17,6 +17,7 @@ USAGE
 <!-- commands -->
 * [`hentai-downloader download INPUT OUTPUT [FILENAME]`](#hentai-downloader-download-input-output-filename)
 * [`hentai-downloader help [COMMAND]`](#hentai-downloader-help-command)
+* [`hentai-downloader regenerate INPUT OUTPUT`](#hentai-downloader-regenerate-input-output)
 * [`hentai-downloader schedule [CONFIG]`](#hentai-downloader-schedule-config)
 
 ## `hentai-downloader download INPUT OUTPUT [FILENAME]`
@@ -25,8 +26,8 @@ Download galleries by ID or URL
 
 ```
 USAGE
-  $ hentai-downloader download INPUT OUTPUT [FILENAME] [--metadata] [--comicInfo] [--videoSkip] [-q]
-    [--checkpoint <value>] [--ifExists error|skip|overwrite] [--help] [--version]
+  $ hentai-downloader download INPUT OUTPUT [FILENAME] [--metadata] [--comicInfo] [--videoSkip] [--imageFormat
+    webp|avif] [-q] [--checkpoint <value>] [--ifExists error|skip|overwrite] [--help] [--version]
 
 ARGUMENTS
   INPUT       http(s) URL or gallery ID to download
@@ -34,15 +35,17 @@ ARGUMENTS
   [FILENAME]  [default: {no}{ext}] Output filename
 
 FLAGS
-  -q, --quiet               Suppress non-error output
-      --checkpoint=<value>  Path to checkpoint file
-      --comicInfo           Output ComicInfo.xml file
-      --help                Show CLI help.
-      --ifExists=<option>   [default: error] Behavior when file already exists
-                            <options: error|skip|overwrite>
-      --metadata            Output metadata file
-      --version             Show CLI version.
-      --videoSkip           Skip video files
+  -q, --quiet                 Suppress non-error output
+      --checkpoint=<value>    Path to checkpoint file
+      --comicInfo             Output ComicInfo.xml file
+      --help                  Show CLI help.
+      --ifExists=<option>     [default: error] Behavior when file already exists
+                              <options: error|skip|overwrite>
+      --imageFormat=<option>  Force image download format
+                              <options: webp|avif>
+      --metadata              Output metadata file
+      --version               Show CLI version.
+      --videoSkip             Skip video files
 
 DESCRIPTION
   Download galleries by ID or URL
@@ -52,26 +55,21 @@ EXAMPLES
 
     $ hentai-downloader download 1571033
 
-  Download with custom output directory
+  Download a gallery by URL
 
-    $ hentai-downloader download 1571033 output/{id}
+    $ hentai-downloader download https://hitomi.la/artist/kinnotama-japanese.html
 
-  Download as ZIP file
+  Download as CBZ file
 
-    $ hentai-downloader download 1571033 output/{id}.zip
+    $ hentai-downloader download 1571033 output/{id}.cbz
 
   Download with custom filename pattern
 
     $ hentai-downloader download 1571033 output/{id} "{no}-{name}{ext}"
 
-  Skip existing files instead of erroring
-
-    $ hentai-downloader download 1571033 --ifExists=skip
-
   Resume from checkpoint
 
-    $ hentai-downloader download https://hitomi.la/artist/kinnotama-japanese.html --checkpoint=.checkpoint `
-      --ifExists=overwrite
+    $ hentai-downloader download 1571033 --checkpoint=.checkpoint --ifExists=overwrite
 ```
 
 _See code: [src/commands/download.ts](https://github.com/fa0311/hentai-downloader/blob/main/src/commands/download.ts)_
@@ -95,6 +93,24 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.36/src/commands/help.ts)_
+
+## `hentai-downloader regenerate INPUT OUTPUT`
+
+```
+USAGE
+  $ hentai-downloader regenerate INPUT OUTPUT [-q] [--help] [--version]
+
+ARGUMENTS
+  INPUT   http(s) URL or gallery ID to download
+  OUTPUT  Output directory or file
+
+FLAGS
+  -q, --quiet    Suppress non-error output
+      --help     Show CLI help.
+      --version  Show CLI version.
+```
+
+_See code: [src/commands/regenerate.ts](https://github.com/fa0311/hentai-downloader/blob/main/src/commands/regenerate.ts)_
 
 ## `hentai-downloader schedule [CONFIG]`
 

@@ -90,7 +90,7 @@ export default class Download extends Command {
 			default: true,
 		}),
 		imageFormat: Flags.custom<"webp" | "avif">({
-			description: "Convert images to specified format",
+			description: "Force image download format",
 			options: ["webp", "avif"],
 		})(),
 		quiet: Flags.boolean({
@@ -187,5 +187,6 @@ export default class Download extends Command {
 	}
 	async catch(error: Error) {
 		this.log(catchError(error));
+		process.exitCode = 1;
 	}
 }

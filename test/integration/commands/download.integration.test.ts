@@ -11,11 +11,11 @@ describe("download command integration tests", () => {
 		const log = await runCommand(["download", "3287639", temp.join("{id}")]);
 		expect(log.stdout).toContain("🚀 Hentai Downloader");
 		expect(await temp.ls(".")).toEqual(["3287639"]);
-		expect(await temp.ls("3287639")).toEqual(["1.jpg", "2.jpg", "3.jpg", "4.jpg", "ComicInfo.xml"]);
-		expect(await temp.hash("3287639", "1.jpg")).toEqual("d091e4d8111d5a1ed5a437c024661c27b239746ff0f8ba9b27e84fc82aa37880");
-		expect(await temp.hash("3287639", "2.jpg")).toEqual("110daeed9dc9e413132e5af785a50ac09b75ca3c19937aaee102179033122d4a");
-		expect(await temp.hash("3287639", "3.jpg")).toEqual("d8327836aedbae90117ba2519c4ec2f68179e2619d1cf29f8b5415e0130c0c9b");
-		expect(await temp.hash("3287639", "4.jpg")).toEqual("2d8d44d11a94183a975b5e614acf32dde1f1b265f6ec9ce090d73d6eae70fbd3");
+		expect(await temp.ls("3287639")).toEqual(["1.avif", "2.avif", "3.avif", "4.avif", "ComicInfo.xml"]);
+		expect(await temp.hash("3287639", "1.avif")).toEqual("f0ffb5bbf010e7d57a6ae1f52c13e6882da8443473bb509be6f6ec744526edb3");
+		expect(await temp.hash("3287639", "2.avif")).toEqual("3644cb2fe85d3f91bdd4d7afd59c930b022ee2aa7552af94d72f7f6645b04b03");
+		expect(await temp.hash("3287639", "3.avif")).toEqual("d00749ff372c0c82f595b33c1494c7d33a3cb119ab5afd3737e7c1a46b5027e4");
+		expect(await temp.hash("3287639", "4.avif")).toEqual("e9a2115638eff656f9eb6cdb9ae5a9ede97f2ae4163870dea432d2660972a951");
 		expect(await temp.hash("3287639", "ComicInfo.xml")).toEqual("d0fc2f07919cdc8cc02ce7125466a6bd1d68554b1cefd1ccd94357a7f6640206");
 	});
 
@@ -25,11 +25,11 @@ describe("download command integration tests", () => {
 		expect(log.stdout).toContain("🚀 Hentai Downloader");
 		expect(await temp.ls(".")).toEqual(["3287639.zip"]);
 		const unzip = await temp.unzip("3287639.zip");
-		expect(await unzip.ls(".")).toEqual(["1.jpg", "2.jpg", "3.jpg", "4.jpg", "ComicInfo.xml"]);
-		expect(await unzip.hash("1.jpg")).toEqual("d091e4d8111d5a1ed5a437c024661c27b239746ff0f8ba9b27e84fc82aa37880");
-		expect(await unzip.hash("2.jpg")).toEqual("110daeed9dc9e413132e5af785a50ac09b75ca3c19937aaee102179033122d4a");
-		expect(await unzip.hash("3.jpg")).toEqual("d8327836aedbae90117ba2519c4ec2f68179e2619d1cf29f8b5415e0130c0c9b");
-		expect(await unzip.hash("4.jpg")).toEqual("2d8d44d11a94183a975b5e614acf32dde1f1b265f6ec9ce090d73d6eae70fbd3");
+		expect(await unzip.ls(".")).toEqual(["1.avif", "2.avif", "3.avif", "4.avif", "ComicInfo.xml"]);
+		expect(await unzip.hash("1.avif")).toEqual("f0ffb5bbf010e7d57a6ae1f52c13e6882da8443473bb509be6f6ec744526edb3");
+		expect(await unzip.hash("2.avif")).toEqual("3644cb2fe85d3f91bdd4d7afd59c930b022ee2aa7552af94d72f7f6645b04b03");
+		expect(await unzip.hash("3.avif")).toEqual("d00749ff372c0c82f595b33c1494c7d33a3cb119ab5afd3737e7c1a46b5027e4");
+		expect(await unzip.hash("4.avif")).toEqual("e9a2115638eff656f9eb6cdb9ae5a9ede97f2ae4163870dea432d2660972a951");
 		expect(await unzip.hash("ComicInfo.xml")).toEqual("d0fc2f07919cdc8cc02ce7125466a6bd1d68554b1cefd1ccd94357a7f6640206");
 	});
 });

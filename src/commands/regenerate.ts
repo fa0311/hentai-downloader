@@ -68,5 +68,6 @@ export default class Regenerate extends Command {
 
 	async catch(error: Error) {
 		this.log(catchError(error));
+		process.exitCode = 1;
 	}
 }

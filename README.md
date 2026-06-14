@@ -78,6 +78,7 @@ docker-compose up -d
   ],
   "output": "output/{id}", // Output path (placeholders available)
   "filename": "{no}{ext}", // Filename pattern
+  "imageFormat": "avif", // Optional forced image format: avif/webp
   "videoSkip": true, // Skip video files
   "comicInfo": true, // Generate ComicInfo.xml
   "ifExists": "skip", // Existing file behavior: skip/overwrite/error
@@ -134,7 +135,7 @@ Available placeholders for output paths and filenames:
 
 - `{no}` - File number (sequential)
 - `{name}` - Original filename
-- `{ext}` - File extension
+- `{ext}` - Downloaded file extension
 
 **Examples:**
 

@@ -39,7 +39,6 @@ describe("sleep", () => {
 		vi.useFakeTimers();
 		const controller = new AbortController();
 		const signal = controller.signal;
-		const initialListeners = signal.addEventListener.length;
 		const promise = sleep(100, signal);
 		await vi.advanceTimersByTimeAsync(100);
 		await promise;
