@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "node:path/posix";
 import { Semaphore } from "async-mutex";
 import type { DownloadFileInfo, GalleryInfo } from "./hitomi/gallery.js";
 import { downloadHitomiNozomiList, extractNozomiGalleryIds, type SearchQuery } from "./hitomi/list.js";
@@ -77,19 +77,18 @@ export const fillGalleryPlaceholders = (template: string, gallery: GalleryInfo) 
 		.replaceAll("{random}", String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, "0"));
 };
 
-export const fillFilenamePlaceholders = (template: string, index: number, all: number, filename: DownloadFileInfo["file"]) => {
-	const ext = path.extname(filename.name);
-	const base = path.basename(filename.name, ext);
+export const fillFilenamePlaceholders = (template: string, index: number, all: number, ext: string, file: DownloadFileInfo["file"]) => {
+	const { name } = path.parse(file.name);
 	const no = String(index + 1).padStart(String(all).length, "0");
 
 	return template
 		.replaceAll("{index}", String(index))
 		.replaceAll("{no}", no)
-		.replaceAll("{name}", base)
+		.replaceAll("{name}", name)
 		.replaceAll("{ext}", ext)
-		.replaceAll("{height}", "height" in filename ? String(filename.height) : "unknown")
-		.replaceAll("{width}", "width" in filename ? String(filename.width) : "unknown")
-		.replaceAll("{hash}", "hash" in filename ? filename.hash : "unknown");
+		.replaceAll("{height}", "height" in file ? String(file.height) : "unknown")
+		.replaceAll("{width}", "width" in file ? String(file.width) : "unknown")
+		.replaceAll("{hash}", "hash" in file ? file.hash : "unknown");
 };
 
 export const isZipFile = (filename: string) => {

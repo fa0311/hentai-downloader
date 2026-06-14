@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { removeNulls } from "../../../src/hitomi/gallery.js";
+import { removeNulls, toFormatExt, toFormatType } from "../../../src/hitomi/gallery.js";
+import { HentaiParseError } from "../../../src/utils/error.js";
 
 describe("removeNulls", () => {
 	it("converts null to undefined", () => {
@@ -34,5 +35,32 @@ describe("removeNulls", () => {
 		expect(result.a).toBeUndefined();
 		expect(result.b).toBeUndefined();
 		expect(result.c).toBe("value");
+	});
+});
+
+describe("toFormatType", () => {
+	it("prefers avif when available", () => {
+		const result = toFormatType({ hasavif: true, haswebp: true });
+		expect(result).toBe("avif");
+	});
+
+	it("falls back to webp when avif is unavailable", () => {
+		const result = toFormatType({ hasavif: false, haswebp: true });
+		expect(result).toBe("webp");
+	});
+
+	it("throws when no supported image format is available", () => {
+		expect(() => toFormatType({ hasavif: false, haswebp: false })).toThrow(HentaiParseError);
+		expect(() => toFormatType({ hasavif: false, haswebp: false })).toThrow("No supported image format available");
+	});
+});
+
+describe("toFormatExt", () => {
+	it("returns avif extension", () => {
+		expect(toFormatExt("avif")).toBe(".avif");
+	});
+
+	it("returns webp extension", () => {
+		expect(toFormatExt("webp")).toBe(".webp");
 	});
 });

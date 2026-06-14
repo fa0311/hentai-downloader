@@ -31,6 +31,7 @@ const configSchema = z.strictObject({
 	runOnInit: z.boolean().default(false),
 	queries: z.array(querySchema).min(1),
 	videoSkip: z.boolean().default(true),
+	imageFormat: z.enum(["webp", "avif"]).optional(),
 	output: z.string().default("output/{id}"),
 	filename: z.string().default("{no}{ext}"),
 	metadata: z.boolean().default(false),

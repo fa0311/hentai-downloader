@@ -74,59 +74,64 @@ describe("fillFilenamePlaceholders", () => {
 	};
 
 	it("replaces no placeholder with zero padding", () => {
-		const result = fillFilenamePlaceholders("{no}", 0, 10, mockFile);
+		const result = fillFilenamePlaceholders("{no}", 0, 10, ".jpg", mockFile);
 		expect(result).toBe("01");
 	});
 
 	it("pads no placeholder based on total count", () => {
-		const result = fillFilenamePlaceholders("{no}", 99, 1000, mockFile);
+		const result = fillFilenamePlaceholders("{no}", 99, 1000, ".jpg", mockFile);
 		expect(result).toBe("0100");
 	});
 
 	it("replaces index placeholder", () => {
-		const result = fillFilenamePlaceholders("{index}", 5, 10, mockFile);
+		const result = fillFilenamePlaceholders("{index}", 5, 10, ".jpg", mockFile);
 		expect(result).toBe("5");
 	});
 
 	it("replaces name placeholder", () => {
-		const result = fillFilenamePlaceholders("{name}", 0, 10, mockFile);
+		const result = fillFilenamePlaceholders("{name}", 0, 10, ".jpg", mockFile);
 		expect(result).toBe("image");
 	});
 
 	it("replaces ext placeholder", () => {
-		const result = fillFilenamePlaceholders("{ext}", 0, 10, mockFile);
+		const result = fillFilenamePlaceholders("{ext}", 0, 10, ".jpg", mockFile);
 		expect(result).toBe(".jpg");
 	});
 
+	it("uses provided extension independently from original filename", () => {
+		const result = fillFilenamePlaceholders("{name}{ext}", 0, 10, ".webp", mockFile);
+		expect(result).toBe("image.webp");
+	});
+
 	it("replaces width and height placeholders", () => {
-		const result = fillFilenamePlaceholders("{width}x{height}", 0, 10, mockFile);
+		const result = fillFilenamePlaceholders("{width}x{height}", 0, 10, ".jpg", mockFile);
 		expect(result).toBe("1920x1080");
 	});
 
 	it("replaces hash placeholder", () => {
-		const result = fillFilenamePlaceholders("{hash}", 0, 10, mockFile);
+		const result = fillFilenamePlaceholders("{hash}", 0, 10, ".jpg", mockFile);
 		expect(result).toBe("abc123");
 	});
 
 	it("replaces multiple placeholders", () => {
-		const result = fillFilenamePlaceholders("{no}_{name}{ext}", 5, 100, mockFile);
+		const result = fillFilenamePlaceholders("{no}_{name}{ext}", 5, 100, ".jpg", mockFile);
 		expect(result).toBe("006_image.jpg");
 	});
 
 	it("handles missing dimensions with 'unknown'", () => {
-		const videoFile = { name: "video.mp4" };
-		const result = fillFilenamePlaceholders("{name}-{width}x{height}{ext}", 0, 10, videoFile);
+		const videoFile = { name: "video", ext: ".mp4" };
+		const result = fillFilenamePlaceholders("{name}-{width}x{height}{ext}", 0, 10, ".mp4", videoFile);
 		expect(result).toBe("video-unknownxunknown.mp4");
 	});
 
 	it("handles missing hash with 'unknown'", () => {
 		const fileNoHash = { name: "file.txt", width: 100, height: 100 };
-		const result = fillFilenamePlaceholders("{hash}", 0, 10, fileNoHash);
+		const result = fillFilenamePlaceholders("{hash}", 0, 10, ".txt", fileNoHash);
 		expect(result).toBe("unknown");
 	});
 
 	it("replaces all occurrences of same placeholder", () => {
-		const result = fillFilenamePlaceholders("{no}-{no}", 5, 100, mockFile);
+		const result = fillFilenamePlaceholders("{no}-{no}", 5, 100, ".jpg", mockFile);
 		expect(result).toBe("006-006");
 	});
 });

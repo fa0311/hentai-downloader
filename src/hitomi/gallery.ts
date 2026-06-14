@@ -1,7 +1,29 @@
+import path from "node:path/posix";
 import { z } from "zod";
 import { HentaiHttpError, HentaiParseError, HentaiZodParseError } from "./../utils/error.js";
 
 const contentsDomain = "gold-usergeneratedcontent.net";
+
+type FormatExtType = "avif" | "webp";
+
+export const toFormatType = ({ hasavif, haswebp }: { hasavif: boolean; haswebp: boolean }): FormatExtType => {
+	if (hasavif) {
+		return "avif";
+	} else if (haswebp) {
+		return "webp";
+	} else {
+		throw new HentaiParseError("No supported image format available");
+	}
+};
+
+export const toFormatExt = (type: FormatExtType): string => {
+	switch (type) {
+		case "avif":
+			return ".avif";
+		case "webp":
+			return ".webp";
+	}
+};
 
 type GGJsCode = {
 	case: string[];
@@ -41,7 +63,7 @@ const getGGJsCode = async (): Promise<GGJsCode> => {
 	};
 };
 
-const getWebpUrlFromHash = (hash: string, ggJs: GGJsCode): string => {
+const getImageUrlFromHash = (hash: string, type: FormatExtType, ggJs: GGJsCode): string => {
 	const directory1 = ggJs.b;
 
 	const dir2PartArray = /^.*(..)(.)$/.exec(hash);
@@ -49,10 +71,19 @@ const getWebpUrlFromHash = (hash: string, ggJs: GGJsCode): string => {
 		throw new HentaiParseError(`Invalid hash format: ${hash}`);
 	}
 	const directory2 = parseInt(dir2PartArray[2] + dir2PartArray[1], 16).toString();
+	const domainPrefix = (() => {
+		switch (type) {
+			case "avif":
+				return "a";
+			case "webp":
+				return "b";
+		}
+	})();
+	const ext = toFormatExt(type);
 
 	const subdomainMatch = ggJs.case.includes(directory2) ? ggJs.o.match : ggJs.o.default;
-	const subdomain = `w${parseInt(subdomainMatch, 10) + 1}`;
-	return `https://${subdomain}.${contentsDomain}/${directory1}/${directory2}/${hash}.webp`;
+	const subdomain = `${domainPrefix}${parseInt(subdomainMatch, 10) + 1}`;
+	return `https://${subdomain}.${contentsDomain}/${directory1}/${directory2}/${hash}${ext}`;
 };
 
 const getStreamUrlFromVideoFilename = (videoFilename: string): string => {
@@ -166,18 +197,15 @@ type DownloadImages = {
 	headers: Record<string, string>;
 };
 const downloadImages = async ({ fileHashs, ggJs, headers }: DownloadImages) => {
-	const webpUrls = fileHashs.map((fileHash) => {
-		const webpUrl = getWebpUrlFromHash(fileHash, ggJs);
-		return webpUrl;
-	});
-
-	const list = webpUrls.map((webpUrl) => {
-		const callback = async () => {
+	const list = fileHashs.map((fileHash) => {
+		const callback = async (signal: AbortSignal, type: FormatExtType) => {
+			const webpUrl = getImageUrlFromHash(fileHash, type, ggJs);
 			const response = await fetch(webpUrl, {
 				headers: {
 					...headers,
 					accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
 				},
+				signal: signal,
 			});
 			return response;
 		};
@@ -218,11 +246,11 @@ export type DownloadFileInfo =
 	| {
 			type: "image";
 			file: GalleryInfoFile;
-			callback: (signal: AbortSignal) => Promise<Response>;
+			callback: (signal: AbortSignal, type: FormatExtType) => Promise<Response>;
 	  }
 	| {
 			type: "video";
-			file: { name: string };
+			file: { name: string; ext: string };
 			callback: (signal: AbortSignal) => Promise<Response>;
 	  };
 
@@ -246,13 +274,14 @@ export const downloadHitomiGalleries = async ({ galleryId, additionalHeaders = {
 	}
 
 	if (galleries.videofilename) {
+		const { ext, base: name } = path.parse(galleries.videofilename);
 		const video = await downloadVideo({
 			videofilename: galleries.videofilename,
 			headers,
 		});
 		list.push({
 			type: "video",
-			file: { name: galleries.videofilename },
+			file: { name, ext },
 			callback: video,
 		});
 	}

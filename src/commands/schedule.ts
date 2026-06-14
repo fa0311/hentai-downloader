@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 import { CronJob } from "cron";
 import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
-import { downloadHitomiGalleries } from "./../hitomi/gallery.js";
+import { downloadHitomiGalleries, toFormatExt, toFormatType } from "./../hitomi/gallery.js";
 import { parseHitomiUrl } from "./../hitomi/url.js";
 import { galleryInfoToComicInfo } from "./../utils/comicInfo.js";
 import { parseConfig } from "../utils/config.js";
@@ -145,9 +145,22 @@ export default class Schedule extends Command {
 							const semaphore = new Semaphore(10);
 							const promises = tasks.map(async (task, i, all) => {
 								await semaphore.runExclusive(async () => {
-									const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file);
+									const [response, filename] = await (async () => {
+										switch (task.type) {
+											case "image": {
+												const type = config.imageFormat ?? toFormatType(task.file);
+												const filename = fillFilenamePlaceholders(config.filename, i, all.length, toFormatExt(type), task.file);
+												const response = await safeRequest(async () => task.callback(fd.signal, type));
+												return [response, filename];
+											}
+											case "video": {
+												const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file.ext, task.file);
+												const response = await safeRequest(async () => task.callback(fd.signal));
+												return [response, filename];
+											}
+										}
+									})();
 									await fd.throwIfErrors();
-									const response = await safeRequest(() => task.callback(fd.signal));
 									const readStream = Readable.fromWeb(response.body);
 									fd.writeStream(filename, readStream);
 									await finished(readStream).catch(() => {});

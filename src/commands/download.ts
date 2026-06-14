@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 import { Semaphore } from "async-mutex";
 import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
-import { downloadHitomiGalleries } from "./../hitomi/gallery.js";
+import { downloadHitomiGalleries, toFormatExt, toFormatType } from "./../hitomi/gallery.js";
 import { parseHitomiUrl } from "./../hitomi/url.js";
 import { differenceUint32Collections } from "../utils/bitmap.js";
 import { catchError } from "../utils/catch.js";
@@ -89,6 +89,10 @@ export default class Download extends Command {
 			description: "Skip video files",
 			default: true,
 		}),
+		imageFormat: Flags.custom<"webp" | "avif">({
+			description: "Convert images to specified format",
+			options: ["webp", "avif"],
+		})(),
 		quiet: Flags.boolean({
 			char: "q",
 			description: "Suppress non-error output",
@@ -149,8 +153,21 @@ export default class Download extends Command {
 								const semaphore = new Semaphore(10);
 								const promises = tasks.map(async (task, i, all) => {
 									await semaphore.runExclusive(async () => {
-										const filename = fillFilenamePlaceholders(args.filename, i, all.length, task.file);
-										const response = await safeRequest(async () => task.callback(fd.signal));
+										const [response, filename] = await (async () => {
+											switch (task.type) {
+												case "image": {
+													const type = flags.imageFormat ?? toFormatType(task.file);
+													const filename = fillFilenamePlaceholders(args.filename, i, all.length, toFormatExt(type), task.file);
+													const response = await safeRequest(async () => task.callback(fd.signal, type));
+													return [response, filename];
+												}
+												case "video": {
+													const filename = fillFilenamePlaceholders(args.filename, i, all.length, task.file.ext, task.file);
+													const response = await safeRequest(async () => task.callback(fd.signal));
+													return [response, filename];
+												}
+											}
+										})();
 										await fd.throwIfErrors();
 										const readStream = Readable.fromWeb(response.body);
 										fd.writeStream(filename, readStream);
