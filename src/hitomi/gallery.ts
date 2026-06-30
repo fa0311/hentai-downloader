@@ -76,7 +76,7 @@ const getImageUrlFromHash = (hash: string, type: FormatExtType, ggJs: GGJsCode):
 			case "avif":
 				return "a";
 			case "webp":
-				return "b";
+				return "w";
 		}
 	})();
 	const ext = toFormatExt(type);
