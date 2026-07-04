@@ -16,48 +16,52 @@ export type GalleryQuery = {
 	hostname: string;
 };
 
-export const getListUrls = ({ artists, series, characters, groups, type, language, tags, hostname }: SearchQuery): string[] => {
+export const getListUrls = (
+	contentHostname: string,
+	{ artists, series, characters, groups, type, language, tags }: SearchQuery,
+): string[] => {
 	const urls: string[] = [];
 
 	const languageQuery = `-${language}.nozomi`;
 	for (const artist of artists) {
-		urls.push(`https://${hostname}/artist/${encodeURIComponent(artist)}${languageQuery}`);
+		urls.push(`https://${contentHostname}/artist/${encodeURIComponent(artist)}${languageQuery}`);
 	}
 
 	for (const group of groups) {
-		urls.push(`https://${hostname}/group/${encodeURIComponent(group)}${languageQuery}`);
+		urls.push(`https://${contentHostname}/group/${encodeURIComponent(group)}${languageQuery}`);
 	}
 
 	for (const _series of series) {
-		urls.push(`https://${hostname}/series/${encodeURIComponent(_series)}${languageQuery}`);
+		urls.push(`https://${contentHostname}/series/${encodeURIComponent(_series)}${languageQuery}`);
 	}
 
 	for (const character of characters) {
-		urls.push(`https://${hostname}/character/${encodeURIComponent(character)}${languageQuery}`);
+		urls.push(`https://${contentHostname}/character/${encodeURIComponent(character)}${languageQuery}`);
 	}
 
 	if (type) {
-		urls.push(`https://${hostname}/type/${encodeURIComponent(type)}${languageQuery}`);
+		urls.push(`https://${contentHostname}/type/${encodeURIComponent(type)}${languageQuery}`);
 	}
 
 	for (const tag of tags) {
-		urls.push(`https://${hostname}/tag/${encodeURIComponent(tag)}${languageQuery}`);
+		urls.push(`https://${contentHostname}/tag/${encodeURIComponent(tag)}${languageQuery}`);
 	}
 
 	if (urls.length === 0) {
-		urls.push(`https://${hostname}/index-${encodeURIComponent(language)}.nozomi`);
+		urls.push(`https://${contentHostname}/index-${encodeURIComponent(language)}.nozomi`);
 	}
 
 	return Array.from(new Set(urls));
 };
 
 type DownloadGalleryIdListsParam = {
+	contentHostname: string;
 	query: SearchQuery;
 	additionalHeaders?: Record<string, string>;
 };
 
-export const downloadGalleryIdLists = async ({ query, additionalHeaders }: DownloadGalleryIdListsParam) => {
-	const listUrls = getListUrls(query);
+export const downloadGalleryIdLists = async ({ contentHostname, query, additionalHeaders }: DownloadGalleryIdListsParam) => {
+	const listUrls = getListUrls(contentHostname, query);
 
 	const tasks = listUrls.map((url) => {
 		return async () => {

@@ -1,6 +1,6 @@
 import path from "node:path/posix";
 import { Semaphore } from "async-mutex";
-import type { DownloadFileInfo, GalleryInfo } from "./source/gallery.js";
+import { type DownloadFileInfo, type GalleryInfo, getContentHostname } from "./source/gallery.js";
 import { downloadGalleryIdLists, extractGalleryIds, type SearchQuery } from "./source/list.js";
 import { exponentialBackoffFactory, maxDelayChain, runBackoff } from "./utils/backoff.js";
 import { intersectUint32Collections } from "./utils/bitmap.js";
@@ -49,7 +49,8 @@ type GetGalleryIds = {
 
 export const getGalleryIds = async ({ query, additionalHeaders }: GetGalleryIds) => {
 	const safeRequest = await createSafeRequest({ maxRetries: 10 });
-	const tasks = await downloadGalleryIdLists({ query, additionalHeaders });
+	const contentHostname = await getContentHostname(query.hostname, additionalHeaders);
+	const tasks = await downloadGalleryIdLists({ contentHostname, query, additionalHeaders });
 	const gallerieIdList = await Promise.all(
 		tasks.map(async (task) => {
 			const response = await safeRequest(() => task());
