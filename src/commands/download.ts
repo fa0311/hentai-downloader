@@ -31,35 +31,35 @@ const parseInput = async (input: string, additionalHeaders?: Record<string, stri
 };
 
 export default class Download extends Command {
-	static description = "Download galleries by ID or URL";
+	static description = "Download galleries by source URL";
 
 	static examples = [
 		{
-			description: "Download a gallery by ID",
-			command: "<%= config.bin %> download 1571033",
+			description: "Download a gallery by URL",
+			command: "<%= config.bin %> download https://example.com/doujinshi/sample-title-1571033.html",
 		},
 		{
-			description: "Download a gallery by URL",
+			description: "Download galleries from an artist URL",
 			command: "<%= config.bin %> download https://example.com/artist/sample-creator-japanese.html",
 		},
 		{
 			description: "Download as CBZ file",
-			command: "<%= config.bin %> download 1571033 output/{id}.cbz",
+			command: "<%= config.bin %> download https://example.com/doujinshi/sample-title-1571033.html output/{id}.cbz",
 		},
 		{
 			description: "Download with custom filename pattern",
-			command: '<%= config.bin %> download 1571033 output/{id} "{no}-{name}{ext}"',
+			command: '<%= config.bin %> download https://example.com/doujinshi/sample-title-1571033.html output/{id} "{no}-{name}{ext}"',
 		},
 		{
 			description: "Resume from checkpoint",
-			command: "<%= config.bin %> download 1571033 --checkpoint=.checkpoint --ifExists=overwrite",
+			command: "<%= config.bin %> download https://example.com/doujinshi/sample-title-1571033.html --checkpoint=.checkpoint --ifExists=overwrite",
 		},
 	];
 
 	static args = {
 		input: Args.string({
 			required: true,
-			description: "http(s) URL or gallery ID to download",
+			description: "http(s) source URL to download",
 		}),
 		output: Args.string({
 			required: true,

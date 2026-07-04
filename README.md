@@ -6,7 +6,7 @@ A CLI tool for downloading galleries from a compatible source. Features schedule
 
 ## ✨ Features
 
-- **Command Line Tool**: Download galleries instantly by ID or URL
+- **Command Line Tool**: Download galleries instantly by source URL
 - **Scheduler**: Automate periodic download tasks with cron expressions
 - **Checkpoint System**: Resume interrupted downloads automatically on next execution
 - **Docker Support**: Easy deployment with docker-compose
@@ -17,11 +17,13 @@ A CLI tool for downloading galleries from a compatible source. Features schedule
 
 ```bash
 # Download a gallery
-hentai-downloader download 1571033
+hentai-downloader download https://example.com/doujinshi/sample-title-1571033.html
 
 # Run scheduled downloads
 hentai-downloader schedule schedule.json
 ```
+
+The `download` command expects a full `https://...` source URL, such as `/doujinshi/sample-title-1571033.html`; a bare numeric ID is not accepted by the CLI.
 
 For detailed command options, see [COMMANDS.md](COMMANDS.md).
 
@@ -40,7 +42,7 @@ pnpm build
 
 ```bash
 docker pull ghcr.io/fa0311/hentai-downloader:latest-cli
-docker run --rm -v ${PWD}/output:/app/output ghcr.io/fa0311/hentai-downloader:latest-cli download 1571033
+docker run --rm -v ${PWD}/output:/app/output ghcr.io/fa0311/hentai-downloader:latest-cli download https://example.com/doujinshi/sample-title-1571033.html
 ```
 
 ### Scheduler Usage
@@ -149,13 +151,13 @@ Available placeholders for output paths and filenames:
 
 ```bash
 # Directory output
-hentai-downloader download 1571033 "output/{id}"
+hentai-downloader download https://example.com/doujinshi/sample-title-1571033.html "output/{id}"
 
 # ZIP output
-hentai-downloader download 1571033 "output/{id}.zip"
+hentai-downloader download https://example.com/doujinshi/sample-title-1571033.html "output/{id}.zip"
 
 # Custom filename
-hentai-downloader download 1571033 "output/{id}" "{no}-{name}{ext}"
+hentai-downloader download https://example.com/doujinshi/sample-title-1571033.html "output/{id}" "{no}-{name}{ext}"
 ```
 
 ## 🛠️ Development

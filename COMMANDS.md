@@ -22,7 +22,7 @@ USAGE
 
 ## `hentai-downloader download INPUT OUTPUT [FILENAME]`
 
-Download galleries by ID or URL
+Download galleries by source URL
 
 ```
 USAGE
@@ -30,7 +30,7 @@ USAGE
     webp|avif] [-q] [--checkpoint <value>] [--ifExists error|skip|overwrite] [--help] [--version]
 
 ARGUMENTS
-  INPUT       http(s) URL or gallery ID to download
+  INPUT       http(s) source URL to download
   OUTPUT      [default: output/{id}] Output directory or file
   [FILENAME]  [default: {no}{ext}] Output filename
 
@@ -48,28 +48,28 @@ FLAGS
       --videoSkip             Skip video files
 
 DESCRIPTION
-  Download galleries by ID or URL
+  Download galleries by source URL
 
 EXAMPLES
-  Download a gallery by ID
-
-    $ hentai-downloader download 1571033
-
   Download a gallery by URL
+
+    $ hentai-downloader download https://example.com/doujinshi/sample-title-1571033.html
+
+  Download galleries from an artist URL
 
     $ hentai-downloader download https://example.com/artist/sample-creator-japanese.html
 
   Download as CBZ file
 
-    $ hentai-downloader download 1571033 output/{id}.cbz
+    $ hentai-downloader download https://example.com/doujinshi/sample-title-1571033.html output/{id}.cbz
 
   Download with custom filename pattern
 
-    $ hentai-downloader download 1571033 output/{id} "{no}-{name}{ext}"
+    $ hentai-downloader download https://example.com/doujinshi/sample-title-1571033.html output/{id} "{no}-{name}{ext}"
 
   Resume from checkpoint
 
-    $ hentai-downloader download 1571033 --checkpoint=.checkpoint --ifExists=overwrite
+    $ hentai-downloader download https://example.com/doujinshi/sample-title-1571033.html --checkpoint=.checkpoint --ifExists=overwrite
 ```
 
 _See code: [src/commands/download.ts](https://github.com/fa0311/hentai-downloader/blob/main/src/commands/download.ts)_
