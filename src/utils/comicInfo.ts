@@ -1,5 +1,5 @@
 import { create } from "xmlbuilder2";
-import type { GalleryInfo } from "../hitomi/gallery.js";
+import type { GalleryInfo } from "../source/gallery.js";
 
 type AgeRatingType =
 	| "Not Applicable"
@@ -220,7 +220,7 @@ export const generateComicInfoXml = (info: ComicInfoXml) => {
 	return doc.end({ prettyPrint: true });
 };
 
-export const galleryInfoToComicInfo = (info: GalleryInfo) => {
+export const galleryInfoToComicInfo = (info: GalleryInfo, hostname: string) => {
 	return generateComicInfoXml({
 		title: info.japanese_title ?? info.title,
 		series: `${info.japanese_title ?? info.title} [${info.id}]`,
@@ -232,12 +232,12 @@ export const galleryInfoToComicInfo = (info: GalleryInfo) => {
 		publisher: info.groups?.map((group) => group.group),
 		genre: info.type || "imageset",
 		tags: info.tags?.map((tag) => tag.tag),
-		web: [`https://hitomi.la/gallery/${info.id}.html`],
+		web: [new URL(info.galleryurl, `https://${hostname}/`).href],
 		pageCount: info.files.length,
 		languageISO: info.language ? pageLangToBCP47(info.language) : undefined,
 		format: info.type || "imageset",
 		characters: info.characters?.map((char) => char.character),
-		scanInformation: "Source: hitomi.la",
+		scanInformation: "Source metadata",
 		seriesGroup: info.parodys?.map((parody) => parody.parody),
 		ageRating: "R18+",
 		page: info.files.map((file, index) => ({

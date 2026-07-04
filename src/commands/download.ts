@@ -3,12 +3,12 @@ import "dotenv/config";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 import { Semaphore } from "async-mutex";
-import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
-import { downloadHitomiGalleries, toFormatExt, toFormatType } from "./../hitomi/gallery.js";
-import { parseHitomiUrl } from "./../hitomi/url.js";
+import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getGalleryIds, isZipFile } from "./../download.js";
+import { downloadGallery, getContentHostname, toFormatExt, toFormatType } from "./../source/gallery.js";
+import { parseSourceUrl } from "./../source/url.js";
 import { differenceUint32Collections } from "../utils/bitmap.js";
 import { catchError } from "../utils/catch.js";
-import { loadCheckpoint } from "../utils/checkpoint.js";
+import { loadCheckpoint, toCheckpoint } from "../utils/checkpoint.js";
 import { galleryInfoToComicInfo } from "./../utils/comicInfo.js";
 import { outputDir, outputZip } from "./../utils/dir.js";
 import { HentaiAlreadyExistsError } from "../utils/error.js";
@@ -20,15 +20,12 @@ import { progress } from "./../utils/progress.js";
 import { initProxy } from "./../utils/proxy.js";
 
 const parseInput = async (input: string, additionalHeaders?: Record<string, string>) => {
-	const isGalleryId = /^[0-9]+$/.test(input);
-	if (isGalleryId) {
-		return [Number(input)];
-	} else {
-		const parsedUrl = parseHitomiUrl(input);
-		if (typeof parsedUrl === "number") {
-			return [parsedUrl];
-		} else {
-			return await getHitomiMangaList({ query: parsedUrl, additionalHeaders });
+	const parsedUrl = parseSourceUrl(input);
+	switch (parsedUrl.discriminator) {
+		case "gallery":
+			return { galleryIds: [parsedUrl.galleryId], hostname: parsedUrl.hostname };
+		case "search": {
+			return { galleryIds: await getGalleryIds({ query: parsedUrl, additionalHeaders }), hostname: parsedUrl.hostname };
 		}
 	}
 };
@@ -43,7 +40,7 @@ export default class Download extends Command {
 		},
 		{
 			description: "Download a gallery by URL",
-			command: "<%= config.bin %> download https://hitomi.la/artist/kinnotama-japanese.html",
+			command: "<%= config.bin %> download https://example.com/artist/sample-creator-japanese.html",
 		},
 		{
 			description: "Download as CBZ file",
@@ -116,16 +113,27 @@ export default class Download extends Command {
 		if (initProxy()) this.log(info("Proxy enabled"));
 
 		const additionalHeaders = await getChromeHeader();
-		const checkPoints = await loadCheckpoint(flags.checkpoint);
 		const paesedGalleryIds = await parseInput(args.input, additionalHeaders);
-		const galleryIds = differenceUint32Collections([paesedGalleryIds, checkPoints]);
+		const contentHostname = await getContentHostname(paesedGalleryIds.hostname, additionalHeaders);
+		const galleryIds = await (async () => {
+			if (flags.checkpoint) {
+				const checkPoints = await loadCheckpoint(flags.checkpoint);
+				const find = checkPoints?.find((cp) => cp.hostname === paesedGalleryIds.hostname);
+				if (find) {
+					return differenceUint32Collections([paesedGalleryIds.galleryIds, find.galleryIds]);
+				}
+			}
+			return paesedGalleryIds.galleryIds;
+		})();
+
 		await outputFile(async (checkpointDiscriptor) => {
 			const checkpoint = flags.checkpoint ? await checkpointDiscriptor.create(flags.checkpoint, "a") : null;
 			await progress({ hidden: flags.quiet }, async (multiBar) => {
 				const opt = { total: galleryIds.length, filename: "Overall", hidden: galleryIds.length <= 1 };
 				await multiBar.create(opt, async (b1) => {
 					for (const galleryId of galleryIds) {
-						const [galleries, allTasks] = await downloadHitomiGalleries({ galleryId, additionalHeaders });
+						const hostname = paesedGalleryIds.hostname;
+						const [galleries, allTasks] = await downloadGallery({ hostname, galleryId, contentHostname, additionalHeaders });
 						const tasks = flags.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
 						const pathname = fillGalleryPlaceholders(args.output, galleries);
 						const fd = isZipFile(pathname) ? await outputZip(pathname) : await outputDir(pathname);
@@ -149,7 +157,7 @@ export default class Download extends Command {
 							const opt = { total: tasks.length, filename: galleries.japanese_title ?? galleries.title, hidden: false };
 							await multiBar.create(opt, async (b2) => {
 								if (flags.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, undefined, 2));
-								if (flags.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
+								if (flags.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries, hostname));
 								const semaphore = new Semaphore(10);
 								const promises = tasks.map(async (task, i, all) => {
 									await semaphore.runExclusive(async () => {
@@ -178,7 +186,7 @@ export default class Download extends Command {
 								await Promise.all(promises);
 							});
 						});
-						await checkpoint?.line(String(galleryId));
+						await checkpoint?.line(toCheckpoint(galleryId, hostname));
 						b1.increment();
 					}
 				});

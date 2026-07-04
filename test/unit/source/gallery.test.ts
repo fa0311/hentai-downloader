@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { removeNulls, toFormatExt, toFormatType } from "../../../src/hitomi/gallery.js";
+import { removeNulls, toFormatExt, toFormatType } from "../../../src/source/gallery.js";
 import { HentaiParseError } from "../../../src/utils/error.js";
 
 describe("removeNulls", () => {

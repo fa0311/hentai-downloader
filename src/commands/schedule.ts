@@ -3,9 +3,9 @@ import "dotenv/config";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
 import { CronJob } from "cron";
-import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getHitomiMangaList, isZipFile } from "./../download.js";
-import { downloadHitomiGalleries, toFormatExt, toFormatType } from "./../hitomi/gallery.js";
-import { parseHitomiUrl } from "./../hitomi/url.js";
+import { createSafeRequest, fillFilenamePlaceholders, fillGalleryPlaceholders, getGalleryIds, isZipFile } from "./../download.js";
+import { downloadGallery, getContentHostname, toFormatExt, toFormatType } from "./../source/gallery.js";
+import { parseSourceUrl } from "./../source/url.js";
 import { galleryInfoToComicInfo } from "./../utils/comicInfo.js";
 import { parseConfig } from "../utils/config.js";
 import { outputDir, outputZip } from "./../utils/dir.js";
@@ -18,9 +18,9 @@ import path from "node:path";
 import { Semaphore } from "async-mutex";
 import pino from "pino";
 import { differenceUint32Collections } from "../utils/bitmap.js";
-import { loadCheckpoint } from "../utils/checkpoint.js";
+import { loadCheckpoint, toCheckpoint } from "../utils/checkpoint.js";
 import type { Query } from "../utils/config.js";
-import { HentaiAlreadyExistsError } from "../utils/error.js";
+import { HentaiAlreadyExistsError, unreachable } from "../utils/error.js";
 import { outputFile } from "../utils/file.js";
 import { exhaustiveMatchAsync } from "../utils/match.js";
 
@@ -29,17 +29,23 @@ const parseInputQuery = () => {
 	return async (inputQuery: Query) => {
 		switch (inputQuery.type) {
 			case "id":
-				return [inputQuery.id];
+				return { galleryIds: [inputQuery.id], hostname: inputQuery.hostname };
 			case "url": {
-				const query = parseHitomiUrl(inputQuery.url);
-				if (typeof query === "number") {
-					return [query];
-				} else {
-					return gallerySemaphore.runExclusive(() => getHitomiMangaList({ query }));
+				const query = parseSourceUrl(inputQuery.url);
+				switch (query.discriminator) {
+					case "gallery":
+						return { galleryIds: [query.galleryId], hostname: query.hostname };
+					case "search":
+						return { galleryIds: await gallerySemaphore.runExclusive(() => getGalleryIds({ query })), hostname: query.hostname };
+					default:
+						return unreachable();
 				}
 			}
 			case "query":
-				return gallerySemaphore.runExclusive(() => getHitomiMangaList({ query: inputQuery.query }));
+				return {
+					galleryIds: await gallerySemaphore.runExclusive(() => getGalleryIds({ query: inputQuery.query })),
+					hostname: inputQuery.query.hostname,
+				};
 		}
 	};
 };
@@ -105,79 +111,98 @@ export default class Schedule extends Command {
 			const start = performance.now();
 			logger.info("Starting scheduled download task");
 			const additionalHeaders = await getChromeHeader();
-			const checkPoints = await loadCheckpoint(config.checkpoint);
 			const parseQuery = parseInputQuery();
 			logger.info("Getting gallery list from queries");
 			const paesedGalleryIdsNested = await Promise.all(config.queries.map(async (inputQuery) => await parseQuery(inputQuery)));
 			const paesedGalleryIds = paesedGalleryIdsNested.flat();
-			const galleryIds = differenceUint32Collections([paesedGalleryIds, checkPoints]);
-			logger.info(`Found ${galleryIds.length} new galleries to download`);
-			logger.debug(`Downloading galleries: ${JSON.stringify(galleryIds)}`);
+
+			const gallers = await (async () => {
+				if (config.checkpoint) {
+					const checkPoints = await loadCheckpoint(config.checkpoint);
+					if (checkPoints) {
+						return Array.from(paesedGalleryIds).map((cp) => {
+							const find = checkPoints.find((pg) => pg.hostname === cp.hostname);
+							if (find) {
+								return { galleryIds: differenceUint32Collections([cp.galleryIds, find.galleryIds]), hostname: cp.hostname };
+							} else {
+								return cp;
+							}
+						});
+					}
+				}
+				return paesedGalleryIds;
+			})();
+
+			logger.info(`Found ${gallers.length} new galleries to download`);
+			logger.debug(`Downloading galleries: ${JSON.stringify(gallers)}`);
 			await outputFile(async (checkpointDiscriptor) => {
 				const checkpoint = config.checkpoint ? await checkpointDiscriptor.create(config.checkpoint, "a") : null;
 
-				for (const galleryId of galleryIds) {
-					try {
-						logger.info(`Downloading gallery ${galleryId}`);
-						const [galleries, allTasks] = await downloadHitomiGalleries({ galleryId, additionalHeaders });
-						const tasks = config.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
-						const pathname = fillGalleryPlaceholders(config.output, galleries);
-						const fd = isZipFile(pathname) ? await outputZip(pathname) : await outputDir(pathname);
-						const fdFactory = exhaustiveMatchAsync({
-							error: async () => {
-								throw new HentaiAlreadyExistsError(`File or directory already exists: ${pathname}`);
-							},
-							skip: async () => {
-								logger.warn(`Skipping existing file or directory: ${pathname}`);
-								return undefined;
-							},
-							overwrite: async () => {
-								logger.warn(`Overwriting existing file or directory: ${pathname}`);
-								await fd.remove();
-								return fd;
-							},
-						});
-						const outputDescriptor = fd.exists ? await fdFactory(config.ifExists) : fd;
-						await outputDescriptor?.create(async (fd) => {
-							const safeRequest = await createSafeRequest({ signal: fd.signal, maxRetries: 30 });
-							if (config.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
-							if (config.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries));
-							const semaphore = new Semaphore(10);
-							const promises = tasks.map(async (task, i, all) => {
-								await semaphore.runExclusive(async () => {
-									const [response, filename] = await (async () => {
-										switch (task.type) {
-											case "image": {
-												const type = config.imageFormat ?? toFormatType(task.file);
-												const filename = fillFilenamePlaceholders(config.filename, i, all.length, toFormatExt(type), task.file);
-												const response = await safeRequest(async () => task.callback(fd.signal, type));
-												return [response, filename];
-											}
-											case "video": {
-												const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file.ext, task.file);
-												const response = await safeRequest(async () => task.callback(fd.signal));
-												return [response, filename];
-											}
-										}
-									})();
-									await fd.throwIfErrors();
-									const readStream = Readable.fromWeb(response.body);
-									fd.writeStream(filename, readStream);
-									await finished(readStream).catch(() => {});
-								});
+				for (const { galleryIds, hostname } of gallers) {
+					const contentHostname = await getContentHostname(hostname, additionalHeaders);
+					for (const galleryId of galleryIds) {
+						try {
+							logger.info(`Downloading gallery ${galleryId}`);
+							const [galleries, allTasks] = await downloadGallery({ galleryId, hostname, contentHostname, additionalHeaders });
+							const tasks = config.videoSkip ? allTasks.filter((task) => task.type !== "video") : allTasks;
+							const pathname = fillGalleryPlaceholders(config.output, galleries);
+							const fd = isZipFile(pathname) ? await outputZip(pathname) : await outputDir(pathname);
+							const fdFactory = exhaustiveMatchAsync({
+								error: async () => {
+									throw new HentaiAlreadyExistsError(`File or directory already exists: ${pathname}`);
+								},
+								skip: async () => {
+									logger.warn(`Skipping existing file or directory: ${pathname}`);
+									return undefined;
+								},
+								overwrite: async () => {
+									logger.warn(`Overwriting existing file or directory: ${pathname}`);
+									await fd.remove();
+									return fd;
+								},
 							});
-							await Promise.all(promises);
-						});
-						await checkpoint?.line(String(galleryId));
-						if (env.COMPLETION_STATUS_PATH) {
-							outputResult(env.COMPLETION_STATUS_PATH, true, logger.error);
+							const outputDescriptor = fd.exists ? await fdFactory(config.ifExists) : fd;
+							await outputDescriptor?.create(async (fd) => {
+								const safeRequest = await createSafeRequest({ signal: fd.signal, maxRetries: 30 });
+								if (config.metadata) fd.writeFile(`galleries.json`, JSON.stringify(galleries, null, 2));
+								if (config.comicInfo) fd.writeFile(`ComicInfo.xml`, galleryInfoToComicInfo(galleries, hostname));
+								const semaphore = new Semaphore(10);
+								const promises = tasks.map(async (task, i, all) => {
+									await semaphore.runExclusive(async () => {
+										const [response, filename] = await (async () => {
+											switch (task.type) {
+												case "image": {
+													const type = config.imageFormat ?? toFormatType(task.file);
+													const filename = fillFilenamePlaceholders(config.filename, i, all.length, toFormatExt(type), task.file);
+													const response = await safeRequest(async () => task.callback(fd.signal, type));
+													return [response, filename];
+												}
+												case "video": {
+													const filename = fillFilenamePlaceholders(config.filename, i, all.length, task.file.ext, task.file);
+													const response = await safeRequest(async () => task.callback(fd.signal));
+													return [response, filename];
+												}
+											}
+										})();
+										await fd.throwIfErrors();
+										const readStream = Readable.fromWeb(response.body);
+										fd.writeStream(filename, readStream);
+										await finished(readStream).catch(() => {});
+									});
+								});
+								await Promise.all(promises);
+							});
+							await checkpoint?.line(toCheckpoint(galleryId, hostname));
+							if (env.COMPLETION_STATUS_PATH) {
+								outputResult(env.COMPLETION_STATUS_PATH, true, logger.error);
+							}
+							logger.debug(`Finished downloading gallery ${galleryId} to ${pathname}`);
+						} catch (error) {
+							if (env.COMPLETION_STATUS_PATH) {
+								outputResult(env.COMPLETION_STATUS_PATH, false, logger.error);
+							}
+							logger.error(error);
 						}
-						logger.debug(`Finished downloading gallery ${galleryId} to ${pathname}`);
-					} catch (error) {
-						if (env.COMPLETION_STATUS_PATH) {
-							outputResult(env.COMPLETION_STATUS_PATH, false, logger.error);
-						}
-						logger.error(error);
 					}
 				}
 			});

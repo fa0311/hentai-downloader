@@ -1,76 +1,86 @@
 import { describe, expect, it } from "vitest";
-import { extractNozomiGalleryIds, getNozomiUrls } from "../../../src/hitomi/list";
+import { extractGalleryIds, getListUrls } from "../../../src/source/list";
 
-describe("getNozomiUrls", () => {
+describe("getListUrls", () => {
 	it("generates URL for single artist", () => {
-		const urls = getNozomiUrls({
-			artists: ["kinnotama"],
+		const urls = getListUrls({
+			discriminator: "search",
+			artists: ["creator-a"],
 			series: [],
 			characters: [],
 			groups: [],
 			language: "japanese",
 			tags: [],
+			hostname: "content.example.com",
 		});
-		expect(urls).toEqual(["https://ltn.gold-usergeneratedcontent.net/artist/kinnotama-japanese.nozomi"]);
+		expect(urls).toEqual(["https://content.example.com/artist/creator-a-japanese.nozomi"]);
 	});
 
 	it("generates URLs for multiple artists", () => {
-		const urls = getNozomiUrls({
-			artists: ["kinnotama", "mignon"],
+		const urls = getListUrls({
+			discriminator: "search",
+			artists: ["creator-a", "creator-b"],
 			series: [],
 			characters: [],
 			groups: [],
 			language: "japanese",
 			tags: [],
+			hostname: "content.example.com",
 		});
 		expect(urls).toEqual([
-			"https://ltn.gold-usergeneratedcontent.net/artist/kinnotama-japanese.nozomi",
-			"https://ltn.gold-usergeneratedcontent.net/artist/mignon-japanese.nozomi",
+			"https://content.example.com/artist/creator-a-japanese.nozomi",
+			"https://content.example.com/artist/creator-b-japanese.nozomi",
 		]);
 	});
 
 	it("generates index URL when no filters specified", () => {
-		const urls = getNozomiUrls({
+		const urls = getListUrls({
+			discriminator: "search",
 			artists: [],
 			series: [],
 			characters: [],
 			groups: [],
 			language: "japanese",
 			tags: [],
+			hostname: "content.example.com",
 		});
-		expect(urls).toEqual(["https://ltn.gold-usergeneratedcontent.net/index-japanese.nozomi"]);
+		expect(urls).toEqual(["https://content.example.com/index-japanese.nozomi"]);
 	});
 
 	it("removes duplicate URLs", () => {
-		const urls = getNozomiUrls({
-			artists: ["mignon", "mignon"],
+		const urls = getListUrls({
+			discriminator: "search",
+			artists: ["creator-b", "creator-b"],
 			series: [],
 			characters: [],
 			groups: [],
 			language: "japanese",
 			tags: [],
+			hostname: "content.example.com",
 		});
-		expect(urls).toEqual(["https://ltn.gold-usergeneratedcontent.net/artist/mignon-japanese.nozomi"]);
+		expect(urls).toEqual(["https://content.example.com/artist/creator-b-japanese.nozomi"]);
 		expect(urls.length).toBe(1);
 	});
 
 	it("encodes special characters in names", () => {
-		const urls = getNozomiUrls({
-			artists: ["artist name"],
+		const urls = getListUrls({
+			discriminator: "search",
+			artists: ["creator name"],
 			series: [],
 			characters: [],
 			groups: [],
 			language: "japanese",
 			tags: [],
+			hostname: "content.example.com",
 		});
-		expect(urls).toEqual([`https://ltn.gold-usergeneratedcontent.net/artist/${encodeURIComponent("artist name")}-japanese.nozomi`]);
+		expect(urls).toEqual([`https://content.example.com/artist/${encodeURIComponent("creator name")}-japanese.nozomi`]);
 	});
 });
 
-describe("extractNozomiGalleryIds", () => {
+describe("extractGalleryIds", () => {
 	it("returns empty array for empty buffer", () => {
 		const buffer = new ArrayBuffer(0);
-		const result = extractNozomiGalleryIds(buffer);
+		const result = extractGalleryIds(buffer);
 		expect(result).toEqual([]);
 	});
 
@@ -78,7 +88,7 @@ describe("extractNozomiGalleryIds", () => {
 		const buffer = new ArrayBuffer(4);
 		const view = new DataView(buffer);
 		view.setInt32(0, 123, false);
-		const result = extractNozomiGalleryIds(buffer);
+		const result = extractGalleryIds(buffer);
 		expect(result).toEqual([123]);
 	});
 
@@ -88,7 +98,7 @@ describe("extractNozomiGalleryIds", () => {
 		view.setInt32(0, 100, false);
 		view.setInt32(4, 200, false);
 		view.setInt32(8, 300, false);
-		const result = extractNozomiGalleryIds(buffer);
+		const result = extractGalleryIds(buffer);
 		expect(result).toEqual([100, 200, 300]);
 	});
 
@@ -97,7 +107,7 @@ describe("extractNozomiGalleryIds", () => {
 		const view = new DataView(buffer);
 		view.setInt32(0, -123, false);
 		view.setInt32(4, -456, false);
-		const result = extractNozomiGalleryIds(buffer);
+		const result = extractGalleryIds(buffer);
 		expect(result).toEqual([-123, -456]);
 	});
 
@@ -105,7 +115,7 @@ describe("extractNozomiGalleryIds", () => {
 		const buffer = new ArrayBuffer(7);
 		const view = new DataView(buffer);
 		view.setInt32(0, 100, false);
-		const result = extractNozomiGalleryIds(buffer);
+		const result = extractGalleryIds(buffer);
 		// 7/4 = 1.75 → 切り捨てで1つだけ抽出される
 		expect(result).toEqual([100]);
 	});

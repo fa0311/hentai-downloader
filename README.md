@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A powerful CLI tool for downloading galleries from Hitomi.la. Features scheduled execution, checkpoint functionality, proxy support, and more for an efficient and robust download experience.
+A CLI tool for downloading galleries from a compatible source. Features scheduled execution, checkpoint functionality, proxy support, and more for an efficient and robust download experience.
 
 ## ✨ Features
 
@@ -65,14 +65,15 @@ docker-compose up -d
   "runOnInit": false, // Execute immediately on startup
   "queries": [
     // Download targets
-    { "type": "id", "id": 1234567 },
-    { "type": "url", "url": "https://hitomi.la/artist/example.html" },
+    { "type": "id", "id": 1234567, "hostname": "example.com" },
+    { "type": "url", "url": "https://example.com/artist/sample-creator-japanese.html" },
     {
       "type": "query",
       "query": {
-        "artists": ["artist-name"],
+        "hostname": "content.example.com",
+        "artists": ["creator-name"],
         "language": "japanese",
-        "tags": ["tag1", "tag2"],
+        "tags": ["tag-a", "tag-b"],
       },
     },
   ],
@@ -91,6 +92,13 @@ For detailed configuration schema, see [src/utils/config.ts](src/utils/config.ts
 ### Environment Variables
 
 Can be set via `.env` file or system environment variables.
+
+#### Source Settings (All commands)
+
+```bash
+# Content metadata and file host
+CONTENT_HOSTNAME=content.example.com
+```
 
 #### Proxy Settings (All commands)
 

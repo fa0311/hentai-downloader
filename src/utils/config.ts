@@ -7,6 +7,7 @@ const querySchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("id"),
 		id: z.number(),
+		hostname: z.string().min(1),
 	}),
 	z.strictObject({
 		type: z.literal("url"),
@@ -15,6 +16,8 @@ const querySchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("query"),
 		query: z.object({
+			discriminator: z.literal("search").default("search"),
+			hostname: z.string().min(1),
 			artists: z.array(z.string()).default([]),
 			series: z.array(z.string()).default([]),
 			characters: z.array(z.string()).default([]),

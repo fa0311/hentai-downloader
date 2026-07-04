@@ -1,50 +1,49 @@
 import { z } from "zod";
 import { unreachable } from "../utils/error.js";
-import type { SearchQuery } from "./list.js";
+import type { GalleryQuery, SearchQuery } from "./list.js";
 
 const urlSchema = z.url();
 
 const galleryDirList = ["cg", "doujinshi", "manga", "gamecg", "imageset", "anime"] as const;
 const listDirList = ["artist", "group", "series", "character", "type", "tag"] as const;
 
-export const parseHitomiUrl = (url: string): SearchQuery | number => {
+export const parseSourceUrl = (url: string): SearchQuery | GalleryQuery => {
 	const parsedUrl = new URL(urlSchema.parse(url));
 	const galleryDir = galleryDirList.join("|");
 	const listDir = listDirList.join("|");
 
 	const galleryPattern = new URLPattern({
 		protocol: "https:",
-		hostname: "hitomi.la",
 		pathname: `/:type(${galleryDir})/:any-:id([0-9]+).html`,
 	});
 
 	const listPattern = new URLPattern({
 		protocol: "https:",
-		hostname: "hitomi.la",
 		pathname: `/:type(${listDir})/:name-:language([a-zA-Z]+).html`,
 	});
 
 	const indexPattern = new URLPattern({
 		protocol: "https:",
-		hostname: "hitomi.la",
 		pathname: `/index-:language([a-zA-Z]+).html`,
 	});
 
 	const searchPattern = new URLPattern({
 		protocol: "https:",
-		hostname: "hitomi.la",
 		pathname: "/search.html",
 	});
 
 	const allPattern = new URLPattern({
 		protocol: "https:",
-		hostname: "hitomi.la",
 		pathname: "/",
 	});
 
 	const galleryMatch = galleryPattern.exec(parsedUrl.href);
 	if (galleryMatch) {
-		return Number(galleryMatch.pathname.groups.id);
+		return {
+			discriminator: "gallery",
+			galleryId: Number(galleryMatch.pathname.groups.id),
+			hostname: parsedUrl.hostname,
+		};
 	}
 	const listMatch = listPattern.exec(parsedUrl.href);
 	if (listMatch) {
@@ -67,12 +66,14 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 		})();
 
 		return {
+			discriminator: "search",
 			series: [],
 			characters: [],
 			groups: [],
 			tags: [],
 			artists: [],
 			language: listMatch.pathname.groups.language ?? "all",
+			hostname: parsedUrl.hostname,
 			...query,
 		};
 	}
@@ -80,12 +81,14 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 	const indexMatch = indexPattern.exec(parsedUrl.href);
 	if (indexMatch) {
 		return {
+			discriminator: "search",
 			series: [],
 			characters: [],
 			groups: [],
 			tags: [],
 			artists: [],
 			language: indexMatch.pathname.groups.language ?? "all",
+			hostname: parsedUrl.hostname,
 		};
 	}
 
@@ -95,7 +98,7 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 		const rawQuery = searchParams.keys().next().value;
 
 		if (!rawQuery) {
-			throw new Error("Invalid Hitomi.la search URL: No search keywords found");
+			throw new Error("Invalid search URL: No search keywords found");
 		}
 
 		const queries = decodeURIComponent(rawQuery)
@@ -105,7 +108,7 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 
 		const args = queries.map((q) => {
 			if (!q.includes(":")) {
-				throw new Error("Unsupported Hitomi.la search URL: Free text search is not supported");
+				throw new Error("Unsupported search URL: Free text search is not supported");
 			}
 			const [key, ...rest] = q.split(":");
 			const value = rest.join(":");
@@ -113,6 +116,7 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 		});
 
 		return {
+			discriminator: "search",
 			artists: args.filter(([k]) => k === "artist").map(([, v]) => v),
 			groups: args.filter(([k]) => k === "group").map(([, v]) => v),
 			series: args.filter(([k]) => k === "series").map(([, v]) => v),
@@ -123,12 +127,14 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 			],
 			language: args.find(([k]) => k === "language")?.[1] ?? "all",
 			type: args.find(([k]) => k === "type")?.[1],
+			hostname: parsedUrl.hostname,
 		};
 	}
 
 	const allMatch = allPattern.exec(parsedUrl.href);
 	if (allMatch) {
 		return {
+			discriminator: "search",
 			artists: [],
 			groups: [],
 			series: [],
@@ -136,8 +142,9 @@ export const parseHitomiUrl = (url: string): SearchQuery | number => {
 			tags: [],
 			language: "all",
 			type: undefined,
+			hostname: parsedUrl.hostname,
 		};
 	}
 
-	throw new Error("Invalid Hitomi.la URL");
+	throw new Error("Invalid source URL");
 };

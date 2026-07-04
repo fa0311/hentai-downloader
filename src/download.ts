@@ -1,7 +1,7 @@
 import path from "node:path/posix";
 import { Semaphore } from "async-mutex";
-import type { DownloadFileInfo, GalleryInfo } from "./hitomi/gallery.js";
-import { downloadHitomiNozomiList, extractNozomiGalleryIds, type SearchQuery } from "./hitomi/list.js";
+import type { DownloadFileInfo, GalleryInfo } from "./source/gallery.js";
+import { downloadGalleryIdLists, extractGalleryIds, type SearchQuery } from "./source/list.js";
 import { exponentialBackoffFactory, maxDelayChain, runBackoff } from "./utils/backoff.js";
 import { intersectUint32Collections } from "./utils/bitmap.js";
 import { HentaiHttpError } from "./utils/error.js";
@@ -42,17 +42,18 @@ export const createSafeRequest = async ({ signal, maxRetries }: SafeRequestParam
 	};
 };
 
-type GetHitomiMangaList = {
+type GetGalleryIds = {
 	query: SearchQuery;
 	additionalHeaders?: Record<string, string>;
 };
-export const getHitomiMangaList = async ({ query, additionalHeaders }: GetHitomiMangaList) => {
+
+export const getGalleryIds = async ({ query, additionalHeaders }: GetGalleryIds) => {
 	const safeRequest = await createSafeRequest({ maxRetries: 10 });
-	const tasks = await downloadHitomiNozomiList({ query, additionalHeaders });
+	const tasks = await downloadGalleryIdLists({ query, additionalHeaders });
 	const gallerieIdList = await Promise.all(
 		tasks.map(async (task) => {
 			const response = await safeRequest(() => task());
-			return extractNozomiGalleryIds(await response.arrayBuffer());
+			return extractGalleryIds(await response.arrayBuffer());
 		}),
 	);
 	return intersectUint32Collections(gallerieIdList);

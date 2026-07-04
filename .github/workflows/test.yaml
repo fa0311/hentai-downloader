@@ -36,3 +36,5 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration
+        env:
+          INPUT: ${{ secrets.INPUT }}

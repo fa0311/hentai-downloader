@@ -1,8 +1,7 @@
 import path from "node:path/posix";
+import { parse } from "node-html-parser";
 import { z } from "zod";
 import { HentaiHttpError, HentaiParseError, HentaiZodParseError } from "./../utils/error.js";
-
-const contentsDomain = "gold-usergeneratedcontent.net";
 
 type FormatExtType = "avif" | "webp";
 
@@ -33,8 +32,8 @@ type GGJsCode = {
 		match: string;
 	};
 };
-const getGGJsCode = async (): Promise<GGJsCode> => {
-	const ggJsUrl = `https://ltn.${contentsDomain}/gg.js?_=${Date.now()}`;
+const getGGJsCode = async (contentHostname: string): Promise<GGJsCode> => {
+	const ggJsUrl = `https://${contentHostname}/gg.js?_=${Date.now()}`;
 	const response = await fetch(ggJsUrl);
 	const ggJsText = await response.text();
 
@@ -63,7 +62,13 @@ const getGGJsCode = async (): Promise<GGJsCode> => {
 	};
 };
 
-const getImageUrlFromHash = (hash: string, type: FormatExtType, ggJs: GGJsCode): string => {
+type GetImageUrlFromHashParam = {
+	assetHostname: string;
+	hash: string;
+	type: FormatExtType;
+	ggJs: GGJsCode;
+};
+const getImageUrlFromHash = ({ assetHostname, hash, type, ggJs }: GetImageUrlFromHashParam): string => {
 	const directory1 = ggJs.b;
 
 	const dir2PartArray = /^.*(..)(.)$/.exec(hash);
@@ -71,7 +76,7 @@ const getImageUrlFromHash = (hash: string, type: FormatExtType, ggJs: GGJsCode):
 		throw new HentaiParseError(`Invalid hash format: ${hash}`);
 	}
 	const directory2 = parseInt(dir2PartArray[2] + dir2PartArray[1], 16).toString();
-	const domainPrefix = (() => {
+	const subhostPrefix = (() => {
 		switch (type) {
 			case "avif":
 				return "a";
@@ -81,13 +86,17 @@ const getImageUrlFromHash = (hash: string, type: FormatExtType, ggJs: GGJsCode):
 	})();
 	const ext = toFormatExt(type);
 
-	const subdomainMatch = ggJs.case.includes(directory2) ? ggJs.o.match : ggJs.o.default;
-	const subdomain = `${domainPrefix}${parseInt(subdomainMatch, 10) + 1}`;
-	return `https://${subdomain}.${contentsDomain}/${directory1}/${directory2}/${hash}${ext}`;
+	const subhostMatch = ggJs.case.includes(directory2) ? ggJs.o.match : ggJs.o.default;
+	const subhost = `${subhostPrefix}${parseInt(subhostMatch, 10) + 1}`;
+	return `https://${subhost}.${assetHostname}/${directory1}/${directory2}/${hash}${ext}`;
 };
 
-const getStreamUrlFromVideoFilename = (videoFilename: string): string => {
-	return `https://streaming.${contentsDomain}/videos/${videoFilename}`;
+type GetStreamUrlFromVideoFilename = {
+	assetHostname: string;
+	videoFilename: string;
+};
+const getStreamUrlFromVideoFilename = ({ assetHostname, videoFilename }: GetStreamUrlFromVideoFilename): string => {
+	return `https://streaming.${assetHostname}/videos/${videoFilename}`;
 };
 
 export const GalleryInfoFileSchema = z.strictObject({
@@ -158,11 +167,12 @@ export const removeNulls = (obj: Record<string, unknown>) => {
 };
 
 type GetGalleriesParam = {
+	contentHostname: string;
 	galleryId: number;
 	headers: Record<string, string>;
 };
-const getGalleries = async ({ galleryId, headers }: GetGalleriesParam): Promise<GalleryInfo> => {
-	const galleriesUrl = `https://ltn.${contentsDomain}/galleries/${galleryId}.js`;
+const getGalleries = async ({ contentHostname, galleryId, headers }: GetGalleriesParam): Promise<GalleryInfo> => {
+	const galleriesUrl = `https://${contentHostname}/galleries/${galleryId}.js`;
 	const response = await fetch(galleriesUrl, {
 		headers: {
 			...headers,
@@ -192,14 +202,15 @@ const getGalleries = async ({ galleryId, headers }: GetGalleriesParam): Promise<
 };
 
 type DownloadImages = {
+	assetHostname: string;
 	fileHashs: string[];
 	ggJs: GGJsCode;
 	headers: Record<string, string>;
 };
-const downloadImages = async ({ fileHashs, ggJs, headers }: DownloadImages) => {
+const downloadImages = async ({ assetHostname, fileHashs, ggJs, headers }: DownloadImages) => {
 	const list = fileHashs.map((fileHash) => {
 		const callback = async (signal: AbortSignal, type: FormatExtType) => {
-			const webpUrl = getImageUrlFromHash(fileHash, type, ggJs);
+			const webpUrl = getImageUrlFromHash({ assetHostname, hash: fileHash, type, ggJs });
 			const response = await fetch(webpUrl, {
 				headers: {
 					...headers,
@@ -215,13 +226,14 @@ const downloadImages = async ({ fileHashs, ggJs, headers }: DownloadImages) => {
 	return list;
 };
 
-type DownloadHitomiParam = {
-	videofilename: string;
+type DownloadVideoParam = {
+	assetHostname: string;
+	videoFilename: string;
 	headers: Record<string, string>;
 };
 
-const downloadVideo = async ({ videofilename, headers }: DownloadHitomiParam) => {
-	const streamFile = getStreamUrlFromVideoFilename(videofilename);
+const downloadVideo = async ({ assetHostname, videoFilename, headers }: DownloadVideoParam) => {
+	const streamFile = getStreamUrlFromVideoFilename({ assetHostname, videoFilename });
 	const callback = async (signal: AbortSignal) => {
 		const response = await fetch(streamFile, {
 			headers: {
@@ -237,7 +249,9 @@ const downloadVideo = async ({ videofilename, headers }: DownloadHitomiParam) =>
 	return callback;
 };
 
-type DownloadHitomiGalleriesParam = {
+type DownloadGalleryParam = {
+	contentHostname: string;
+	hostname: string;
 	galleryId: number;
 	additionalHeaders?: Record<string, string>;
 };
@@ -254,31 +268,30 @@ export type DownloadFileInfo =
 			callback: (signal: AbortSignal) => Promise<Response>;
 	  };
 
-export const downloadHitomiGalleries = async ({ galleryId, additionalHeaders = {} }: DownloadHitomiGalleriesParam) => {
+export const downloadGallery = async ({ contentHostname, hostname, galleryId, additionalHeaders }: DownloadGalleryParam) => {
+	const assetHostname = contentHostname.split(".").slice(1).join(".");
 	const headers = {
 		...additionalHeaders,
 		"accept-language": "ja-JP,ja;q=0.9",
 		"cache-control": "no-cache",
 		pragma: "no-cache",
-		referer: `https://hitomi.la/reader/${galleryId}.html`,
+		referer: `https://${hostname}/reader/${galleryId}.html`,
 	};
-	const ggJs = await getGGJsCode();
-	const galleries = await getGalleries({ galleryId, headers });
+	const ggJs = await getGGJsCode(contentHostname);
+	const galleries = await getGalleries({ contentHostname, galleryId, headers });
 
 	const list = [] as DownloadFileInfo[];
 
 	const fileHashs = galleries.files.map((e) => e.hash);
-	const imageList = await downloadImages({ fileHashs, ggJs, headers });
+	const imageList = await downloadImages({ assetHostname, fileHashs, ggJs, headers });
 	for (const [index, file] of galleries.files.entries()) {
 		list.push({ type: "image", file, callback: imageList[index] });
 	}
 
 	if (galleries.videofilename) {
-		const { ext, base: name } = path.parse(galleries.videofilename);
-		const video = await downloadVideo({
-			videofilename: galleries.videofilename,
-			headers,
-		});
+		const videoFilename = galleries.videofilename;
+		const { ext, base: name } = path.parse(videoFilename);
+		const video = await downloadVideo({ assetHostname, videoFilename, headers });
 		list.push({
 			type: "video",
 			file: { name, ext },
@@ -286,4 +299,25 @@ export const downloadHitomiGalleries = async ({ galleryId, additionalHeaders = {
 		});
 	}
 	return [galleries, list] as const;
+};
+export const getContentHostname = async (hostname: string, additionalHeaders?: Record<string, string>) => {
+	const headers = {
+		...additionalHeaders,
+		"accept-language": "ja-JP,ja;q=0.9",
+		"cache-control": "no-cache",
+		pragma: "no-cache",
+	};
+	const response = await fetch(`https://${hostname}/`, {
+		headers: headers,
+	});
+	if (!response.ok) {
+		throw new HentaiHttpError(`Failed to fetch hostname: ${hostname} - ${response.status} ${response.statusText}`);
+	}
+	const html = await response.text();
+	const root = parse(html);
+	const src = root.querySelector("script[src]")?.getAttribute("src");
+	if (!src) {
+		throw new HentaiParseError("Failed to find script tag in hostname HTML");
+	}
+	return new URL(src, `https://${hostname}/`).hostname;
 };

@@ -57,7 +57,7 @@ EXAMPLES
 
   Download a gallery by URL
 
-    $ hentai-downloader download https://hitomi.la/artist/kinnotama-japanese.html
+    $ hentai-downloader download https://example.com/artist/sample-creator-japanese.html
 
   Download as CBZ file
 

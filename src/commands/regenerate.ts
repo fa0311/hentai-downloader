@@ -3,7 +3,7 @@ import path from "node:path";
 import consumers from "node:stream/consumers";
 import { Args, Command, Flags } from "@oclif/core";
 import { isZipFile } from "../download.js";
-import type { GalleryInfo } from "../hitomi/gallery.js";
+import type { GalleryInfo } from "../source/gallery.js";
 import { catchError } from "../utils/catch.js";
 import { galleryInfoToComicInfo } from "../utils/comicInfo.js";
 import { copyDir, copyZip } from "../utils/dirCopy.js";
@@ -26,6 +26,10 @@ export default class Regenerate extends Command {
 			char: "q",
 			description: "Suppress non-error output",
 			default: false,
+		}),
+		hostname: Flags.string({
+			required: true,
+			description: "Hostname for generating absolute URLs in ComicInfo.xml",
 		}),
 		help: Flags.help(),
 		version: Flags.version(),
@@ -54,7 +58,7 @@ export default class Regenerate extends Command {
 
 					const rawGalleries = await consumers.json(await fd.read("galleries.json"));
 					const oldComicInfo = await consumers.text(await fd.read("ComicInfo.xml"));
-					const newComicInfo = galleryInfoToComicInfo(rawGalleries as unknown as GalleryInfo);
+					const newComicInfo = galleryInfoToComicInfo(rawGalleries as unknown as GalleryInfo, flags.hostname);
 					if (oldComicInfo !== newComicInfo) {
 						await fd.open(output, async (out) => {
 							out.writeFile("ComicInfo.xml", newComicInfo);
