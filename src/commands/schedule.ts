@@ -132,8 +132,9 @@ export default class Schedule extends Command {
 				}
 				return paesedGalleryIds;
 			})();
+			const galleryCount = gallers.reduce((sum, { galleryIds }) => sum + galleryIds.length, 0);
 
-			logger.info(`Found ${gallers.length} new galleries to download`);
+			logger.info(`Found ${galleryCount} new galleries to download`);
 			logger.debug(`Downloading galleries: ${JSON.stringify(gallers)}`);
 			await outputFile(async (checkpointDiscriptor) => {
 				const checkpoint = config.checkpoint ? await checkpointDiscriptor.create(config.checkpoint, "a") : null;
