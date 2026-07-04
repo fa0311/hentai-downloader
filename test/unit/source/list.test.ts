@@ -3,7 +3,7 @@ import { extractGalleryIds, getListUrls } from "../../../src/source/list";
 
 describe("getListUrls", () => {
 	it("generates URL for single artist", () => {
-		const urls = getListUrls({
+		const urls = getListUrls("content.example.com", {
 			discriminator: "search",
 			artists: ["creator-a"],
 			series: [],
@@ -17,7 +17,7 @@ describe("getListUrls", () => {
 	});
 
 	it("generates URLs for multiple artists", () => {
-		const urls = getListUrls({
+		const urls = getListUrls("content.example.com", {
 			discriminator: "search",
 			artists: ["creator-a", "creator-b"],
 			series: [],
@@ -34,7 +34,7 @@ describe("getListUrls", () => {
 	});
 
 	it("generates index URL when no filters specified", () => {
-		const urls = getListUrls({
+		const urls = getListUrls("content.example.com", {
 			discriminator: "search",
 			artists: [],
 			series: [],
@@ -48,7 +48,7 @@ describe("getListUrls", () => {
 	});
 
 	it("removes duplicate URLs", () => {
-		const urls = getListUrls({
+		const urls = getListUrls("content.example.com", {
 			discriminator: "search",
 			artists: ["creator-b", "creator-b"],
 			series: [],
@@ -63,7 +63,7 @@ describe("getListUrls", () => {
 	});
 
 	it("encodes special characters in names", () => {
-		const urls = getListUrls({
+		const urls = getListUrls("content.example.com", {
 			discriminator: "search",
 			artists: ["creator name"],
 			series: [],
