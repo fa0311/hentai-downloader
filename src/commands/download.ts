@@ -20,12 +20,13 @@ import { progress } from "./../utils/progress.js";
 import { initProxy } from "./../utils/proxy.js";
 
 const parseInput = async (input: string, additionalHeaders?: Record<string, string>) => {
-	const parsedUrl = parseSourceUrl(input);
-	switch (parsedUrl.discriminator) {
+	const query = parseSourceUrl(input);
+	switch (query.discriminator) {
 		case "gallery":
-			return { galleryIds: [parsedUrl.galleryId], hostname: parsedUrl.hostname };
+			return { galleryIds: [query.galleryId], hostname: query.hostname };
 		case "search": {
-			return { galleryIds: await getGalleryIds({ query: parsedUrl, additionalHeaders }), hostname: parsedUrl.hostname };
+			const contentHostname = await getContentHostname(query.hostname, additionalHeaders);
+			return { galleryIds: await getGalleryIds({ contentHostname, query, additionalHeaders }), hostname: query.hostname };
 		}
 	}
 };
@@ -52,7 +53,8 @@ export default class Download extends Command {
 		},
 		{
 			description: "Resume from checkpoint",
-			command: "<%= config.bin %> download https://example.com/doujinshi/sample-title-1571033.html --checkpoint=.checkpoint --ifExists=overwrite",
+			command:
+				"<%= config.bin %> download https://example.com/doujinshi/sample-title-1571033.html --checkpoint=.checkpoint --ifExists=overwrite",
 		},
 	];
 

@@ -18,13 +18,14 @@ import path from "node:path";
 import { Semaphore } from "async-mutex";
 import pino from "pino";
 import { differenceUint32Collections } from "../utils/bitmap.js";
+import { createCache } from "../utils/cache.js";
 import { loadCheckpoint, toCheckpoint } from "../utils/checkpoint.js";
 import type { Query } from "../utils/config.js";
 import { HentaiAlreadyExistsError, unreachable } from "../utils/error.js";
 import { outputFile } from "../utils/file.js";
 import { exhaustiveMatchAsync } from "../utils/match.js";
 
-const parseInputQuery = () => {
+const parseInputQuery = (getHostname: (url: string) => Promise<string>) => {
 	const gallerySemaphore = new Semaphore(5);
 	return async (inputQuery: Query) => {
 		switch (inputQuery.type) {
@@ -35,17 +36,24 @@ const parseInputQuery = () => {
 				switch (query.discriminator) {
 					case "gallery":
 						return { galleryIds: [query.galleryId], hostname: query.hostname };
-					case "search":
-						return { galleryIds: await gallerySemaphore.runExclusive(() => getGalleryIds({ query })), hostname: query.hostname };
+					case "search": {
+						const contentHostname = await getHostname(query.hostname);
+						return {
+							galleryIds: await gallerySemaphore.runExclusive(() => getGalleryIds({ contentHostname, query })),
+							hostname: query.hostname,
+						};
+					}
 					default:
 						return unreachable();
 				}
 			}
-			case "query":
+			case "query": {
+				const contentHostname = await getHostname(inputQuery.query.hostname);
 				return {
-					galleryIds: await gallerySemaphore.runExclusive(() => getGalleryIds({ query: inputQuery.query })),
+					galleryIds: await gallerySemaphore.runExclusive(() => getGalleryIds({ contentHostname, query: inputQuery.query })),
 					hostname: inputQuery.query.hostname,
 				};
+			}
 		}
 	};
 };
@@ -111,7 +119,8 @@ export default class Schedule extends Command {
 			const start = performance.now();
 			logger.info("Starting scheduled download task");
 			const additionalHeaders = await getChromeHeader();
-			const parseQuery = parseInputQuery();
+			const safeContentHostname = createCache(async (url: string) => getContentHostname(url, additionalHeaders));
+			const parseQuery = parseInputQuery(safeContentHostname);
 			logger.info("Getting gallery list from queries");
 			const paesedGalleryIdsNested = await Promise.all(config.queries.map(async (inputQuery) => await parseQuery(inputQuery)));
 			const paesedGalleryIds = paesedGalleryIdsNested.flat();
@@ -140,7 +149,7 @@ export default class Schedule extends Command {
 				const checkpoint = config.checkpoint ? await checkpointDiscriptor.create(config.checkpoint, "a") : null;
 
 				for (const { galleryIds, hostname } of gallers) {
-					const contentHostname = await getContentHostname(hostname, additionalHeaders);
+					const contentHostname = await safeContentHostname(hostname);
 					for (const galleryId of galleryIds) {
 						try {
 							logger.info(`Downloading gallery ${galleryId}`);
